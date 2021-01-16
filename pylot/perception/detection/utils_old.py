@@ -145,9 +145,38 @@ class BoundingBox3D(object):
         extent (:py:class:`~pylot.utils.Vector3D`): The extent of the bounding
             box.
     """
-    def __init__(self, transform, extent):
+    def __init__(self, transform=None, extent=None, corners=None):
         self.transform = transform
         self.extent = extent
+        self.corners = corners
+
+    @classmethod
+    def from_dimensions(cls, bbox_dimensions, location, rotation_y):
+        """Creates a 3D bounding box.
+
+        Args:
+            bbox_dimensions: The height, width and length of the bbox.
+            location: The location of the box in the camera frame.
+            rotation: The rotation of the bbox.
+
+        Returns:
+            :py:class:`.BoundingBox3D`: A bounding box instance.
+        """
+        c, s = np.cos(rotation_y), np.sin(rotation_y)
+        R = np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]], dtype=np.float32)
+        l, w, h = bbox_dimensions[2], bbox_dimensions[1], bbox_dimensions[0]
+        x_corners = [
+            l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2
+        ]
+        y_corners = [0, 0, 0, 0, -h, -h, -h, -h]
+        z_corners = [
+            w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2
+        ]
+        corners = np.array([x_corners, y_corners, z_corners], dtype=np.float32)
+        corners_3d = np.dot(R, corners).transpose(1, 0)
+        corners_3d = corners_3d + np.array(location, dtype=np.float32).reshape(
+            1, 3)
+        return cls(corners=corners_3d)
 
     @classmethod
     def from_simulator_bounding_box(cls, bbox):
@@ -223,6 +252,15 @@ class BoundingBox3D(object):
         # Retrieve the eight coordinates of the bounding box with respect to
         # the origin of the bounding box.
         import numpy as np
+        if self.corners is not None:
+            pts_2d = np.dot(intrinsic_matrix,
+                            self.corners.transpose(1, 0)).transpose(1, 0)
+            pts_2d = pts_2d[:, :2] / pts_2d[:, 2:]
+            camera_coordinates = [
+                pylot.utils.Vector2D(pt[0], pt[1]) for pt in pts_2d
+            ]
+            return camera_coordinates
+
         extent = self.extent
         bbox = np.array([
             pylot.utils.Location(x=+extent.x, y=+extent.y, z=-extent.z),
@@ -456,104 +494,14 @@ def get_precision_recall_at_iou(ground_truths, predictions, iou_threshold):
         ground_truths, predictions, iou_threshold)
     return get_precision_recall(true_pos, false_pos, false_neg)
 
-# =========================================================================
-# ========================================================================
-# Calculating Error values between detected and ground locations of 
-# obstacles per timestamp
-# =========================================================================
-# ========================================================================
-def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
-    """ match the ground and detected obstacles together
-    based on IoU values on bounding boxes
-    """
-    
-    matched = [] #[[ground1, det1], [ground2, det2], [ground3, det3], etc] all indexes
-    extra_ground = [] # false negatives
-    extra_det = [] # false positives
-
-    # no detections -> everything FN
-    if len(det_obstacles) == 0:
-        return [], range(len(ground_obstacles)), []
-
-    # no ground obstacles -> everything FP
-    if len(ground_obstacles) == 0:
-        return [], [], range(len(det_obstacles))
-
-    ious = []
-    for i in range(len(det_obstacles)):
-        for j in range(len(ground_obstacles)):
-            det_bb = det_obstacles[i]._bounding_box_2D
-            ground_bb = ground_obstacles[i]._bounding_box_2D
-            iou = det_bb.calculate_iou(ground_bb)
-            if (iou > iou_threshold):
-                ious.append((i, j, iou))
-    
-    # If no IOUs were over the threshold, return all predictions as false
-    # positives and all ground truths as false negatives.
-    if len(ious) == 0:
-        return [], range(len(ground_obstacles)), range(len(det_obstacles))
-    else:
-        ious.sort(key=lambda x: x[-1], reverse=True)
-        ground_set, det_set = set(), set()
-
-        for idx in range(len(ious)):
-            det_idx = ious[idx][0]
-            ground_idx = ious[idx][1]
-            iou_val = ious[idx][2]
-            
-            if (ground_idx not in ground_set and 
-                det_idx not in det_set):
-                ground_set.add(ground_idx)
-                det_set.add(det_idx)
-                matched.append((ground_idx, det_idx))
-
-        # extra obstacles and false negatives/positives
-        for i in range(len(ground_obstacles)):
-            if (i not in ground_set):
-                extra_ground.append(i)
-        for i in range(len(det_obstacles)):
-            if (i not in det_set):
-                extra_det.append(i)
-
-    return matched, extra_ground, extra_det
-
-def get_errors(ground_obstacles, det_obstacles):
-    sorted_obstacles = \
-        sorted(det_obstacles, key=lambda o: o.confidence, reverse=True)
-
-    #  match obstacles together 
-    matched, extra_ground, extra_det = match_ground_detected(ground_obstacles, sorted_obstacles, 0.5)
-    
-    errs = []
-
-    for i in range(len(matched)):
-        ground_idx = matched[i][0]
-        det_idx = matched[i][1]
-
-        ground_loc  = ground_obstacles[ground_idx].transform.location.as_numpy_array()
-        det_loc  = det_obstacles[det_idx].transform.location.as_numpy_array()
-
-        cur_err = (np.linalg.norm(ground_loc - det_loc)) ** 2 
-
-        errs.append((ground_obstacles[ground_idx].id, cur_err))
-    
-    for i in range(len(extra_ground)):
-        ground_idx = extra_ground[i]
-
-        errs.append((ground_obstacles[ground_idx].id, -1))
-
-    return errs
-
 
 def get_mAP(ground_obstacles, obstacles):
     """Return mAP with IoU threshold of 0.5"""
     # Sort bboxes descending by score.
     sorted_obstacles = \
         sorted(obstacles, key=lambda o: o.confidence, reverse=True)
-    detected_bboxes = [o._bounding_box_2D for o in sorted_obstacles]
-    ground_bboxes = [
-        obstacle._bounding_box_2D for obstacle in ground_obstacles
-    ]
+    detected_bboxes = [o.bounding_box_2D for o in sorted_obstacles]
+    ground_bboxes = [obstacle.bounding_box_2D for obstacle in ground_obstacles]
     # Compute recall precision. The results are sorted in descending
     # order by recall.
     prec_rec = []
@@ -593,7 +541,7 @@ def get_obstacle_locations(obstacles, depth_msg, ego_transform, camera_setup,
         obstacles_with_location = []
         for obstacle in obstacles:
             location = point_cloud.get_pixel_location(
-                obstacle.bounding_box.get_center_point(),
+                obstacle.bounding_box_2D.get_center_point(),
                 transformed_camera_setup)
             if location is not None:
                 obstacle.transform = pylot.utils.Transform(
@@ -610,7 +558,7 @@ def get_obstacle_locations(obstacles, depth_msg, ego_transform, camera_setup,
             ego_transform * depth_frame.camera_setup.transform)
 
         for obstacle in obstacles:
-            center_point = obstacle.bounding_box.get_center_point()
+            center_point = obstacle.bounding_box_2D.get_center_point()
             # Sample several points around the center of the bounding box
             # in case the bounding box is not well centered on the obstacle.
             # In such situations the center point might be in between legs,

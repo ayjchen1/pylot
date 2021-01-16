@@ -71,34 +71,26 @@ class DetectionEvalOperator(erdos.Operator):
         sim_time = timestamp.coordinates[0]
         while len(self._detector_start_end_times) > 0:
             (end_time, start_time) = self._detector_start_end_times[0]
-
+            # We can compute mAP if the endtime is not greater than the ground
+            # time.
             if end_time <= game_time:
+                # This is the closest ground bounding box to the end time.
                 heapq.heappop(self._detector_start_end_times)
-
                 ground_obstacles = self.__get_ground_obstacles_at(end_time)
-
+                # Get detector output obstacles.
                 obstacles = self.__get_obstacles_at(start_time)
-
                 if (len(obstacles) > 0 or len(ground_obstacles) > 0):
-                    errs = pylot.perception.detection.utils.get_errors(
+                    mAP = pylot.perception.detection.utils.get_mAP(
                         ground_obstacles, obstacles)
-
                     # Get runtime in ms
                     runtime = (time.time() - op_start_time) * 1000
                     self._csv_logger.info('{},{},{},{},{:.4f}'.format(
                         time_epoch_ms(), sim_time, self.config.name, 'runtime',
                         runtime))
-
-                    self._logger.info('errors calculated')
-
-                    for i in range(len(errs)):
-                        ob_id = errrs[i][0]
-                        err_val = errs[i][1]
-
-                        self._csv_logger.info('{},{},{},{},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, ob_id, 'ERROR',
-                            err_val))
-
+                    self._logger.info('mAP is: {}'.format(mAP))
+                    self._csv_logger.info('{},{},{},{},{:.4f}'.format(
+                        time_epoch_ms(), sim_time, self.config.name, 'mAP',
+                        mAP))
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
             else:
