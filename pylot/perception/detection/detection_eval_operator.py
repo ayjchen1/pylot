@@ -92,7 +92,7 @@ class DetectionEvalOperator(erdos.Operator):
                     self._logger.info('errors calculated')
 
                     for i in range(len(errs)):
-                        ob_id = errrs[i][0]
+                        ob_id = errs[i][0]
                         err_val = errs[i][1]
 
                         self._csv_logger.info('{},{},{},{},{:.4f}'.format(
