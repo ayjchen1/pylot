@@ -535,12 +535,12 @@ def get_errors(ground_obstacles, det_obstacles):
 
         cur_err = (np.linalg.norm(ground_loc - det_loc)) ** 2 
 
-        errs.append((ground_obstacles[ground_idx].id, cur_err))
+        errs.append((ground_obstacles[ground_idx].id, det_obstacles[det_idx].id, cur_err))
     
     for i in range(len(extra_ground)):
         ground_idx = extra_ground[i]
 
-        errs.append((ground_obstacles[ground_idx].id, -1))
+        errs.append((ground_obstacles[ground_idx].id, -1, -1))
 
     return errs
 
