@@ -530,17 +530,19 @@ def get_errors(ground_obstacles, det_obstacles):
         ground_idx = matched[i][0]
         det_idx = matched[i][1]
 
+        vehicle_label = ground_obstacles[ground_idx].label
         ground_loc  = ground_obstacles[ground_idx].transform.location.as_numpy_array()
         det_loc  = det_obstacles[det_idx].transform.location.as_numpy_array()
 
         cur_err = (np.linalg.norm(ground_loc - det_loc)) ** 2 
 
-        errs.append((ground_obstacles[ground_idx].id, det_obstacles[det_idx].id, cur_err))
+        errs.append((ground_obstacles[ground_idx].id, det_obstacles[det_idx].id, vehicle_label, cur_err))
     
     for i in range(len(extra_ground)):
         ground_idx = extra_ground[i]
 
-        errs.append((ground_obstacles[ground_idx].id, -1, -1))
+        vehicle_label = ground_obstacles[ground_idx].label
+        errs.append((ground_obstacles[ground_idx].id, -1, vehicle_label, -1))
 
     return errs
 

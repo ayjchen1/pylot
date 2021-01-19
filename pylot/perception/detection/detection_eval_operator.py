@@ -94,11 +94,12 @@ class DetectionEvalOperator(erdos.Operator):
                     for i in range(len(errs)):
                         ground_ob_id = errs[i][0]
                         det_ob_id = errs[i][1]
-                        err_val = errs[i][2]
+                        veh_label = errs[i][2]
+                        err_val = errs[i][3]
 
-                        self._csv_logger.info('{},{},{},{},{},{:.4f}'.format(
+                        self._csv_logger.info('{},{},{},{},{},{},{:.4f}'.format(
                             time_epoch_ms(), sim_time, ground_ob_id, det_ob_id,
-                            'VIS ERROR', err_val))
+                            veh_label, 'VIS ERROR', err_val))
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
