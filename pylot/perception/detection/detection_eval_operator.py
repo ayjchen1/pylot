@@ -75,7 +75,7 @@ class DetectionEvalOperator(erdos.Operator):
             if end_time <= game_time:
                 heapq.heappop(self._detector_start_end_times)
 
-                ground_obstacles = self.__get_ground_obstacles_at(end_time)
+                ego_transform, ground_obstacles = self.__get_ground_obstacles_at(end_time)
 
                 obstacles = self.__get_obstacles_at(start_time)
 
@@ -97,11 +97,16 @@ class DetectionEvalOperator(erdos.Operator):
                         err_val = errs[i][2]
 
                         obj_label = ground_ob.id
+                        
+                        ego_loc = ego_transform.location.as_numpy_array()
+                        ob_actual_loc = ground_ob.transform.location.as_numpy_array()
 
+                        relative_dist = ob_actual_loc - ego_loc
                         # (time, time, object label, object id, x_obj - x_ego, error)
 
-                        self._csv_logger.info('{},{},{},{},{},{},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, obj_label, ground_ob_id,
+                        self._csv_logger.info('{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
+                            time_epoch_ms(), sim_time, ground_ob_id, obj_label,
+                            relative_dist[0], relative_dist[1], relative_dist[2], 
                             err_val))
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
@@ -113,9 +118,9 @@ class DetectionEvalOperator(erdos.Operator):
         self.__garbage_collect_obstacles()
 
     def __get_ground_obstacles_at(self, timestamp):
-        for (ground_time, obstacles) in self._ground_obstacles:
+        for (ego_transform, ground_time, obstacles) in self._ground_obstacles:
             if ground_time == timestamp:
-                return obstacles
+                return ego_transform, obstacles
             elif ground_time > timestamp:
                 break
         self._logger.fatal(
@@ -181,8 +186,9 @@ class DetectionEvalOperator(erdos.Operator):
         self._logger.debug('@{}: {} received ground obstacles'.format(
             msg.timestamp, self.config.name))
         game_time = msg.timestamp.coordinates[0]
+        ego_transform = msg.ego_transform
         vehicles, people, _ = self.__get_obstacles_by_category(msg.obstacles)
-        self._ground_obstacles.append((game_time, people + vehicles))
+        self._ground_obstacles.append((game_time, people + vehicles, ego_transform))
 
     def __compute_closest_frame_time(self, time):
         base = int(time) / self._sim_interval * self._sim_interval
