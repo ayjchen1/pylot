@@ -84,22 +84,25 @@ class DetectionEvalOperator(erdos.Operator):
                         ground_obstacles, obstacles)
 
                     # Get runtime in ms
-                    runtime = (time.time() - op_start_time) * 1000
-                    self._csv_logger.info('{},{},{},{},{:.4f}'.format(
-                        time_epoch_ms(), sim_time, self.config.name, 'runtime',
-                        runtime))
+                    # runtime = (time.time() - op_start_time) * 1000
+                    # self._csv_logger.info('{},{},{},{},{:.4f}'.format(
+                    #    time_epoch_ms(), sim_time, self.config.name, 'runtime',
+                    #    runtime))
 
                     self._logger.info('errors calculated')
 
                     for i in range(len(errs)):
-                        ground_ob_id = errs[i][0]
-                        det_ob_id = errs[i][1]
-                        veh_label = errs[i][2]
-                        err_val = errs[i][3]
+                        ground_ob = errs[i][0]
+                        det_ob = errs[i][1]
+                        err_val = errs[i][2]
+
+                        obj_label = ground_ob.id
+
+                        # (time, time, object label, object id, x_obj - x_ego, error)
 
                         self._csv_logger.info('{},{},{},{},{},{},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, ground_ob_id, det_ob_id,
-                            veh_label, 'VIS ERROR', err_val))
+                            time_epoch_ms(), sim_time, obj_label, ground_ob_id,
+                            err_val))
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
