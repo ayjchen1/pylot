@@ -144,11 +144,13 @@ class ObstaclesMessage(erdos.Message):
             Detected obstacles.
         runtime (:obj:`float`, optional): The runtime of the operator that
             produced the obstacles (in ms).
+        ego_transform (optional -- only for ground obstacles)
     """
-    def __init__(self, timestamp, obstacles, runtime=0):
+    def __init__(self, timestamp, obstacles, ego_pose=None, runtime=0):
         super(ObstaclesMessage, self).__init__(timestamp, None)
         self.obstacles = obstacles
         self.runtime = runtime
+        self.ego_transform = ego_pose
 
     def __repr__(self):
         return self.__str__()
