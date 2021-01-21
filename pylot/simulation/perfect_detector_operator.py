@@ -149,7 +149,7 @@ class PerfectDetectorOperator(erdos.Operator):
         det_obstacles = det_obstacles + det_speed_limits + det_stop_signs
 
         # Send the detected obstacles.
-        obstacles_stream.send(ObstaclesMessage(timestamp, det_obstacles))
+        obstacles_stream.send(ObstaclesMessage(timestamp, det_obstacles, vehicle_transform))
         obstacles_stream.send(erdos.WatermarkMessage(timestamp))
 
         if self._flags.log_detector_output:
