@@ -96,16 +96,18 @@ class DetectionEvalOperator(erdos.Operator):
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
 
-                        obj_label = ground_ob.id
+                        obj_label = ground_ob.label
                         
                         ego_loc = ego_transform.location.as_numpy_array()
                         ob_actual_loc = ground_ob.transform.location.as_numpy_array()
+
+                        print(ego_loc) 
 
                         relative_dist = ob_actual_loc - ego_loc
                         # (time, time, object label, object id, x_obj - x_ego, error)
 
                         self._csv_logger.info('{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, ground_ob_id, obj_label,
+                            time_epoch_ms(), sim_time, ground_ob.id, obj_label,
                             relative_dist[0], relative_dist[1], relative_dist[2], 
                             err_val))
 
