@@ -84,7 +84,7 @@ class DetectionEvalOperator(erdos.Operator):
                         ground_obstacles, obstacles)
 
                     # Get runtime in ms
-                    # runtime = (time.time() - op_start_time) * 1000
+                    runtime = (time.time() - op_start_time) * 1000
                     # self._csv_logger.info('{},{},{},{},{:.4f}'.format(
                     #    time_epoch_ms(), sim_time, self.config.name, 'runtime',
                     #    runtime))
@@ -118,7 +118,7 @@ class DetectionEvalOperator(erdos.Operator):
         self.__garbage_collect_obstacles()
 
     def __get_ground_obstacles_at(self, timestamp):
-        for (ego_transform, ground_time, obstacles) in self._ground_obstacles:
+        for (ground_time, obstacles, ego_transform) in self._ground_obstacles:
             if ground_time == timestamp:
                 return ego_transform, obstacles
             elif ground_time > timestamp:
