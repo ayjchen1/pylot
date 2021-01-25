@@ -3,6 +3,7 @@ import heapq
 import time
 
 import erdos
+from erdos import Message, ReadStream, Timestamp, WriteStream
 
 import pylot.perception.detection.utils
 from pylot.utils import time_epoch_ms
@@ -23,7 +24,7 @@ class DetectionEvalOperator(erdos.Operator):
         obstacles_stream.add_callback(self.on_obstacles)
         ground_obstacles_stream.add_callback(self.on_ground_obstacles)
         erdos.add_watermark_callback(
-            [obstacles_stream, ground_obstacles_stream], [], self.on_watermark)
+            [obstacles_stream, ground_obstacles_stream], [obstacles_error_stream], self.on_watermark)
         self._flags = flags
         self._logger = erdos.utils.setup_logging(self.config.name,
                                                  self.config.log_file_name)
@@ -49,9 +50,11 @@ class DetectionEvalOperator(erdos.Operator):
                 :py:class:`~pylot.perception.messages.ObstaclesMessage` are
                 received from the simulator.
         """
-        return []
+        obstacles_error_stream = erdos.WriteStream()
+        return [obstacles_error_stream]
 
-    def on_watermark(self, timestamp):
+    def on_watermark(self, timestamp: Timestamp,
+                     obstacles_error_stream: WriteStream):
         """Invoked when all input streams have received a watermark.
 
         Args:
@@ -95,24 +98,24 @@ class DetectionEvalOperator(erdos.Operator):
                         ground_ob = errs[i][0]
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
-
-                        obj_label = ground_ob.label
+                        
+                        det_ob.vis_error = err_val
                         
                         ego_loc = ego_transform.location.as_numpy_array()
                         ob_actual_loc = ground_ob.transform.location.as_numpy_array()
-
-                        print(ego_loc) 
-
                         relative_dist = ob_actual_loc - ego_loc
-                        # (time, time, object label, object id, x_obj - x_ego, error)
 
+                        # (time, time, object label, object id, x_obj - x_ego, error)
                         self._csv_logger.info('{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, ground_ob.id, obj_label,
+                            time_epoch_ms(), sim_time, ground_ob.id, ground_ob.label,
                             relative_dist[0], relative_dist[1], relative_dist[2], 
                             err_val))
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
+                
+                obstacles_stream.send(ObstaclesMessage(timestamp, det_obstacles))
+                obstacles_stream.send(erdos.WatermarkMessage(timestamp))
             else:
                 # The remaining entries require newer ground obstacles.
                 break

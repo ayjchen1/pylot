@@ -159,8 +159,10 @@ def add_detection_evaluation(obstacles_stream,
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    erdos.connect(DetectionEvalOperator, op_config,
+    [obstacles_error_stream] = erdos.connect(DetectionEvalOperator, op_config,
                   [obstacles_stream, ground_obstacles_stream], FLAGS)
+
+    return obstacles_error_stream
 
 
 def add_control_evaluation(pose_stream,
@@ -247,22 +249,6 @@ def add_obstacle_tracking(obstacles_stream,
         ObjectTrackerOperator, op_config,
         [obstacles_stream, bgr_camera_stream, time_to_decision_stream],
         FLAGS.tracker_type, FLAGS)
-    return obstacle_tracking_stream
-
-
-def add_center_track_tracking(bgr_camera_stream,
-                              camera_setup,
-                              name='center_track'):
-    from pylot.perception.tracking.center_track_operator import \
-        CenterTrackOperator
-    op_config = erdos.OperatorConfig(name='center_track_operator',
-                                     flow_watermarks=True,
-                                     log_file_name=FLAGS.log_file_name,
-                                     csv_log_file_name=FLAGS.csv_log_file_name,
-                                     profile_file_name=FLAGS.profile_file_name)
-    [obstacle_tracking_stream] = erdos.connect(CenterTrackOperator, op_config,
-                                               [bgr_camera_stream], FLAGS,
-                                               camera_setup)
     return obstacle_tracking_stream
 
 
@@ -420,6 +406,51 @@ def add_planning(pose_stream,
     return waypoints_stream
 
 
+def add_rgb_camera(transform,
+                   vehicle_id_stream,
+                   release_sensor_stream,
+                   name='center_rgb_camera',
+                   fov=90):
+    from pylot.drivers.sensor_setup import RGBCameraSetup
+    rgb_camera_setup = RGBCameraSetup(name, FLAGS.camera_image_width,
+                                      FLAGS.camera_image_height, transform,
+                                      fov)
+    camera_stream, notify_reading_stream = _add_camera_driver(
+        vehicle_id_stream, release_sensor_stream, rgb_camera_setup)
+    return (camera_stream, notify_reading_stream, rgb_camera_setup)
+
+
+def add_depth_camera(transform,
+                     vehicle_id_stream,
+                     release_sensor_stream,
+                     name='center_depth_camera',
+                     fov=90):
+    from pylot.drivers.sensor_setup import DepthCameraSetup
+    depth_camera_setup = DepthCameraSetup(name, FLAGS.camera_image_width,
+                                          FLAGS.camera_image_height, transform,
+                                          fov)
+    ground_depth_camera_stream, notify_reading_stream = _add_camera_driver(
+        vehicle_id_stream, release_sensor_stream, depth_camera_setup)
+    return (ground_depth_camera_stream, notify_reading_stream,
+            depth_camera_setup)
+
+
+def add_segmented_camera(transform,
+                         vehicle_id_stream,
+                         release_sensor_stream,
+                         name='center_segmented_camera',
+                         fov=90):
+    from pylot.drivers.sensor_setup import SegmentedCameraSetup
+    segmented_camera_setup = SegmentedCameraSetup(name,
+                                                  FLAGS.camera_image_width,
+                                                  FLAGS.camera_image_height,
+                                                  transform, fov)
+    ground_segmented_camera_stream, notify_reading_stream = _add_camera_driver(
+        vehicle_id_stream, release_sensor_stream, segmented_camera_setup)
+    return (ground_segmented_camera_stream, notify_reading_stream,
+            segmented_camera_setup)
+
+
 def add_left_right_cameras(transform,
                            vehicle_id_stream,
                            release_sensor_stream,
@@ -432,10 +463,10 @@ def add_left_right_cameras(transform,
             FLAGS.camera_image_height,
             FLAGS.offset_left_right_cameras,
             fov)
-    left_camera_stream, notify_left_stream = add_camera_driver(
-        left_camera_setup, vehicle_id_stream, release_sensor_stream)
-    right_camera_stream, notify_right_stream = add_camera_driver(
-        right_camera_setup, vehicle_id_stream, release_sensor_stream)
+    left_camera_stream, notify_left_stream = _add_camera_driver(
+        vehicle_id_stream, release_sensor_stream, left_camera_setup)
+    right_camera_stream, notify_right_stream = _add_camera_driver(
+        vehicle_id_stream, release_sensor_stream, right_camera_setup)
     return (left_camera_stream, right_camera_stream, notify_left_stream,
             notify_right_stream)
 
@@ -491,7 +522,7 @@ def add_lane_invasion_sensor(vehicle_id_stream):
     return lane_invasion_stream
 
 
-def add_camera_driver(camera_setup, vehicle_id_stream, release_sensor_stream):
+def _add_camera_driver(vehicle_id_stream, release_sensor_stream, camera_setup):
     from pylot.drivers.carla_camera_driver_operator import \
         CarlaCameraDriverOperator
     op_config = erdos.OperatorConfig(name=camera_setup.get_name() +
@@ -664,10 +695,8 @@ def add_bounding_box_logging(obstacles_stream,
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream] = erdos.connect(BoundingBoxLoggerOperator,
-                                                op_config, [obstacles_stream],
-                                                FLAGS)
-    return finished_indicator_stream
+    erdos.connect(BoundingBoxLoggerOperator, op_config, [obstacles_stream],
+                  FLAGS)
 
 
 def add_camera_logging(stream, name, filename_prefix):
@@ -676,10 +705,8 @@ def add_camera_logging(stream, name, filename_prefix):
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream] = erdos.connect(CameraLoggerOperator,
-                                                op_config, [stream], FLAGS,
-                                                filename_prefix)
-    return finished_indicator_stream
+    erdos.connect(CameraLoggerOperator, op_config, [stream], FLAGS,
+                  filename_prefix)
 
 
 def add_chauffeur_logging(vehicle_id_stream, pose_stream,
@@ -718,12 +745,10 @@ def add_eval_metric_logging(collision_stream, lane_invasion_stream,
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream
-     ] = erdos.connect(EvalMetricLoggerOperator, op_config, [
-         collision_stream, lane_invasion_stream, traffic_light_invasion_stream,
-         imu_stream, pose_stream
-     ], FLAGS)
-    return finished_indicator_stream
+    erdos.connect(EvalMetricLoggerOperator, op_config, [
+        collision_stream, lane_invasion_stream, traffic_light_invasion_stream,
+        imu_stream, pose_stream
+    ], FLAGS)
 
 
 def add_imu_logging(imu_stream, name='imu_logger_operator'):
@@ -732,9 +757,7 @@ def add_imu_logging(imu_stream, name='imu_logger_operator'):
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream] = erdos.connect(IMULoggerOperator, op_config,
-                                                [imu_stream], FLAGS)
-    return finished_indicator_stream
+    erdos.connect(IMULoggerOperator, op_config, [imu_stream], FLAGS)
 
 
 def add_lidar_logging(point_cloud_stream,
@@ -745,10 +768,8 @@ def add_lidar_logging(point_cloud_stream,
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream] = erdos.connect(LidarLoggerOperator, op_config,
-                                                [point_cloud_stream], FLAGS,
-                                                filename_prefix)
-    return finished_indicator_stream
+    erdos.connect(LidarLoggerOperator, op_config, [point_cloud_stream], FLAGS,
+                  filename_prefix)
 
 
 def add_multiple_object_tracker_logging(
@@ -759,10 +780,8 @@ def add_multiple_object_tracker_logging(
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream
-     ] = erdos.connect(MultipleObjectTrackerLoggerOperator, op_config,
-                       [obstacles_stream], FLAGS)
-    return finished_indicator_stream
+    erdos.connect(MultipleObjectTrackerLoggerOperator, op_config,
+                  [obstacles_stream], FLAGS)
 
 
 def add_trajectory_logging(obstacles_tracking_stream,
@@ -773,10 +792,8 @@ def add_trajectory_logging(obstacles_tracking_stream,
                                      log_file_name=FLAGS.log_file_name,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
-    [finished_indicator_stream
-     ] = erdos.connect(TrajectoryLoggerOperator, op_config,
-                       [obstacles_tracking_stream], FLAGS)
-    return finished_indicator_stream
+    erdos.connect(TrajectoryLoggerOperator, op_config,
+                  [obstacles_tracking_stream], FLAGS)
 
 
 def add_visualizer(pose_stream=None,
@@ -788,6 +805,7 @@ def add_visualizer(pose_stream=None,
                    segmentation_stream=None,
                    imu_stream=None,
                    obstacles_stream=None,
+                   obstacles_error_stream=None,
                    traffic_lights_stream=None,
                    tracked_obstacles_stream=None,
                    lane_detection_stream=None,
@@ -829,6 +847,10 @@ def add_visualizer(pose_stream=None,
     if obstacles_stream is None or not FLAGS.visualize_detected_obstacles:
         obstacles_stream = erdos.IngestStream()
         streams_to_send_top_on.append(obstacles_stream)
+    if obstacles_error_stream is None or not FLAGS.visualize_detected_obstacles:
+        print("============= ! ERROR WITH OBSTACLES ERROR STREAM")
+        obstacles_error_stream = erdos.IngestStream()
+        streams_to_send_top_on.append(obstacles_error_stream)
     if tl_camera_stream is None or not FLAGS.visualize_detected_traffic_lights:
         tl_camera_stream = erdos.IngestStream()
         streams_to_send_top_on.append(tl_camera_stream)
@@ -867,7 +889,7 @@ def add_visualizer(pose_stream=None,
     erdos.connect(VisualizerOperator, op_config, [
         pose_stream, camera_stream, tl_camera_stream, prediction_camera_stream,
         depth_stream, point_cloud_stream, segmentation_stream, imu_stream,
-        obstacles_stream, traffic_lights_stream, tracked_obstacles_stream,
+        obstacles_stream, obstacles_error_stream, traffic_lights_stream, tracked_obstacles_stream,
         lane_detection_stream, prediction_stream, waypoints_stream,
         control_stream, control_display_stream
     ], pygame_display, FLAGS)

@@ -59,6 +59,7 @@ def add_obstacle_detection(center_camera_stream,
     """
     obstacles_stream = None
     perfect_obstacles_stream = None
+    obstacles_error_stream = None
     if FLAGS.obstacle_detection:
         obstacles_stream_wo_depth = None
         if any('efficientdet' in model
@@ -78,6 +79,7 @@ def add_obstacle_detection(center_camera_stream,
                     obstacles_stream_wo_depth, depth_stream, pose_stream,
                     center_camera_setup)
 
+
     if FLAGS.perfect_obstacle_detection or FLAGS.evaluate_obstacle_detection:
         assert (pose_stream is not None and depth_camera_stream is not None
                 and segmented_camera_stream is not None
@@ -89,7 +91,7 @@ def add_obstacle_detection(center_camera_stream,
             pose_stream, ground_obstacles_stream,
             ground_speed_limit_signs_stream, ground_stop_signs_stream)
         if FLAGS.evaluate_obstacle_detection:
-            pylot.operator_creator.add_detection_evaluation(
+            obstacles_error_stream = pylot.operator_creator.add_detection_evaluation(
                 obstacles_stream, perfect_obstacles_stream)
         if FLAGS.perfect_obstacle_detection:
             obstacles_stream = perfect_obstacles_stream
@@ -97,7 +99,7 @@ def add_obstacle_detection(center_camera_stream,
     if FLAGS.simulator_obstacle_detection:
         obstacles_stream = ground_obstacles_stream
 
-    return obstacles_stream, perfect_obstacles_stream
+    return obstacles_stream, perfect_obstacles_stream, obstacles_error_stream
 
 
 def add_traffic_light_detection(tl_transform,

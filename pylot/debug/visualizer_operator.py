@@ -30,7 +30,7 @@ class VisualizerOperator(erdos.Operator):
     def __init__(self, pose_stream, rgb_camera_stream, tl_camera_stream,
                  prediction_camera_stream, depth_camera_stream,
                  point_cloud_stream, segmentation_stream, imu_stream,
-                 obstacles_stream, traffic_lights_stream,
+                 obstacles_stream, obstacles_error_stream, traffic_lights_stream,
                  tracked_obstacles_stream, lane_detection_stream,
                  prediction_stream, waypoints_stream, control_stream,
                  display_control_stream, pygame_display, flags):
@@ -54,6 +54,11 @@ class VisualizerOperator(erdos.Operator):
         obstacles_stream.add_callback(
             partial(self.save, msg_type="Obstacle", queue=self._obstacle_msgs))
         visualize_streams.append(obstacles_stream)
+
+        self._obstacle_error_msgs = deque()
+        obstacles_error_stream.add_callback(
+            partial(self.save, msg_type="ObstacleError", queue=self._obstacle_error_msgs))
+        visualize_streams.append(obstacles_error_stream)
 
         self._tracked_obstacle_msgs = deque()
         tracked_obstacles_stream.add_callback(
@@ -148,9 +153,12 @@ class VisualizerOperator(erdos.Operator):
         if flags.visualize_rgb_camera:
             self.display_array.append("RGB")
             self.window_titles.append("RGB Camera")
-        if flags.visualize_detected_obstacles:
-            self.display_array.append("Obstacle")
+        if flags.visualize_detected_obstacles: 
+            # include obstacles error here; todo: seperate into flags
+            self.display_array.append("ObstacleError")
             self.window_titles.append("Detected obstacles")
+            #self.display_array.append("Obstacle")
+            #self.window_titles.append("Detected obstacles")
         if flags.visualize_tracked_obstacles:
             self.display_array.append("TrackedObstacle")
             self.window_titles.append("Obstacle tracking")
@@ -198,7 +206,7 @@ class VisualizerOperator(erdos.Operator):
     def connect(pose_stream, rgb_camera_stream, tl_camera_stream,
                 prediction_camera_stream, depth_stream, point_cloud_stream,
                 segmentation_stream, imu_stream, obstacles_stream,
-                traffic_lights_stream, tracked_obstacles_stream,
+                obstacles_error_stream, traffic_lights_stream, tracked_obstacles_stream,
                 lane_detection_stream, prediction_stream, waypoints_stream,
                 control_stream, display_control_stream):
         return []
@@ -285,6 +293,7 @@ class VisualizerOperator(erdos.Operator):
         imu_msg = self.get_message(self._imu_msgs, timestamp, "IMU")
         obstacle_msg = self.get_message(self._obstacle_msgs, timestamp,
                                         "Obstacle")
+        obstacle_error_msg = self.get_message(self._obstacle_error_msgs, timestamp, "ObstacleError")                                        
         traffic_light_msg = self.get_message(self._traffic_light_msgs,
                                              timestamp, "TrafficLight")
         tracked_obstacle_msg = self.get_message(self._tracked_obstacle_msgs,
@@ -316,6 +325,11 @@ class VisualizerOperator(erdos.Operator):
         elif sensor_to_display == "Obstacle" and bgr_msg and obstacle_msg:
             bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                        obstacle_msg.obstacles,
+                                                       ego_transform)
+            bgr_msg.frame.visualize(self.display, timestamp=timestamp)
+        elif sensor_to_display == "ObstacleError" and bgr_msg and obstacle_error_msg: # CHANGE W/ ERROR MESSAGE
+            bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
+                                                       obstacle_error_msg.obstacles,
                                                        ego_transform)
             bgr_msg.frame.visualize(self.display, timestamp=timestamp)
         elif (sensor_to_display == "TLCamera" and tl_camera_msg

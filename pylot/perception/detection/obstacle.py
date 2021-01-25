@@ -30,6 +30,7 @@ class Obstacle(object):
         id (:obj:`int`): The identifier of the obstacle.
         transform (:py:class:`~pylot.utils.Transform`): Transform of the
             obstacle.
+        vis_error: the detection/visibility error of the obstacle
     """
     def __init__(self,
                  bounding_box,
@@ -37,13 +38,13 @@ class Obstacle(object):
                  label,
                  id=-1,
                  transform=None,
-                 detailed_label='',
-                 bounding_box_2D=None):
+                 vis_error=-1,
+                 detailed_label=''):
         self.bounding_box = bounding_box
         if isinstance(bounding_box, BoundingBox2D):
-            self.bounding_box_2D = bounding_box
+            self._bounding_box_2D = bounding_box
         else:
-            self.bounding_box_2D = bounding_box_2D
+            self._bounding_box_2D = None
         self.confidence = confidence
         self.label = label
         self.id = id
@@ -55,6 +56,7 @@ class Obstacle(object):
             self.segmentation_class = 4
         else:
             self.segmentation_class = None
+        self.vis_error = vis_error
         # Thresholds to be used for detection of the obstacle.
         self.__segmentation_threshold = 0.20
         self.__depth_threshold = 5
@@ -138,6 +140,9 @@ class Obstacle(object):
                       ego_transform=None,
                       text=None):
         """Annotate the image with the bounding box of the obstacle."""
+        if not self._bounding_box_2D:
+            raise ValueError(
+                'Obstacle {} does not have 2D bounding box'.format(self.id))
         if text is None:
             text = '{}, {:.1f}'.format(self.label, self.confidence)
             if self.id != -1:
@@ -145,23 +150,16 @@ class Obstacle(object):
             if ego_transform is not None and self.transform is not None:
                 text += ', {:.1f}m'.format(
                     ego_transform.location.distance(self.transform.location))
+            text += ", error:{}".format(self.vis_error)
+            
         if self.label in bbox_color_map:
             color = bbox_color_map[self.label]
         else:
             color = [255, 255, 255]
         # Show bounding box.
-        if isinstance(self.bounding_box, BoundingBox3D):
-            if self.bounding_box.corners is None:
-                raise ValueError(
-                    'Obstacle {} does not have bbox corners'.format(self.id))
-            corners = self.bounding_box.to_camera_view(
-                None, frame.camera_setup.get_extrinsic_matrix(),
-                frame.camera_setup.get_intrinsic_matrix())
-            frame.draw_3d_box(corners, color)
-        else:
-            frame.draw_box(self.bounding_box_2D.get_min_point(),
-                           self.bounding_box_2D.get_max_point(), color)
-            frame.draw_text(self.bounding_box_2D.get_min_point(), text, color)
+        frame.draw_box(self._bounding_box_2D.get_min_point(),
+                       self._bounding_box_2D.get_max_point(), color)
+        frame.draw_text(self._bounding_box_2D.get_min_point(), text, color)
 
     def draw_trajectory_on_frame(self,
                                  trajectory,
@@ -231,11 +229,11 @@ class Obstacle(object):
         ]
 
     def get_in_log_format(self):
-        if not self.bounding_box_2D:
+        if not self._bounding_box_2D:
             raise ValueError(
                 'Obstacle {} does not have 2D bounding box'.format(self.id))
-        min_point = self.bounding_box_2D.get_min_point()
-        max_point = self.bounding_box_2D.get_max_point()
+        min_point = self._bounding_box_2D.get_min_point()
+        max_point = self._bounding_box_2D.get_max_point()
         return (self.label, self.detailed_label, self.id,
                 ((min_point.x, min_point.y), (max_point.x, max_point.y)))
 
@@ -284,8 +282,8 @@ class Obstacle(object):
             rectangle over the obstacle if the obstacle is deemed to be
             visible, None otherwise.
         """
-        if self.bounding_box_2D:
-            return self.bounding_box_2D
+        if self._bounding_box_2D:
+            return self._bounding_box_2D
         # Convert the bounding box of the obstacle to the camera coordinates.
         bb_coordinates = self.bounding_box.to_camera_view(
             self.transform, depth_frame.camera_setup.get_extrinsic_matrix(),
@@ -320,7 +318,7 @@ class Obstacle(object):
                 depth = self._distance(
                     depth_frame.camera_setup.get_transform())
                 if abs(depth - mean_depth) <= self.__depth_threshold:
-                    self.bounding_box_2D = bbox_2d
+                    self._bounding_box_2D = bbox_2d
                     return bbox_2d
         return None
 
