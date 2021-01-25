@@ -50,10 +50,12 @@ class VisualizerOperator(erdos.Operator):
             partial(self.save, msg_type="IMU", queue=self._imu_msgs))
         visualize_streams.append(imu_stream)
 
+        """
         self._obstacle_msgs = deque()
         obstacles_stream.add_callback(
             partial(self.save, msg_type="Obstacle", queue=self._obstacle_msgs))
         visualize_streams.append(obstacles_stream)
+        """
 
         self._obstacle_error_msgs = deque()
         obstacles_error_stream.add_callback(
@@ -291,8 +293,8 @@ class VisualizerOperator(erdos.Operator):
         segmentation_msg = self.get_message(self._segmentation_msgs, timestamp,
                                             "Segmentation")
         imu_msg = self.get_message(self._imu_msgs, timestamp, "IMU")
-        obstacle_msg = self.get_message(self._obstacle_msgs, timestamp,
-                                        "Obstacle")
+        obstacle_msg = None
+        # obstacle_msg = self.get_message(self._obstacle_msgs, timestamp, "Obstacle")
         obstacle_error_msg = self.get_message(self._obstacle_error_msgs, timestamp, "ObstacleError")                                        
         traffic_light_msg = self.get_message(self._traffic_light_msgs,
                                              timestamp, "TrafficLight")
