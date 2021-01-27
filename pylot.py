@@ -139,6 +139,7 @@ def driver():
             depth_stream, depth_camera_stream, ground_segmented_stream,
             ground_obstacles_stream, ground_speed_limit_signs_stream,
             ground_stop_signs_stream, time_to_decision_loop_stream)
+
     tl_transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION,
                                          pylot.utils.Rotation())
     traffic_lights_stream, tl_camera_stream = \

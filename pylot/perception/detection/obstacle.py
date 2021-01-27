@@ -38,8 +38,8 @@ class Obstacle(object):
                  label,
                  id=-1,
                  transform=None,
-                 vis_error=-1,
-                 detailed_label=''):
+                 detailed_label='',
+                 vis_error=-1):
         self.bounding_box = bounding_box
         if isinstance(bounding_box, BoundingBox2D):
             self._bounding_box_2D = bounding_box
@@ -150,7 +150,7 @@ class Obstacle(object):
             if ego_transform is not None and self.transform is not None:
                 text += ', {:.1f}m'.format(
                     ego_transform.location.distance(self.transform.location))
-            text += ", error:{}".format(self.vis_error)
+            text += ", error:{:.3f}".format(self.vis_error)
             
         if self.label in bbox_color_map:
             color = bbox_color_map[self.label]

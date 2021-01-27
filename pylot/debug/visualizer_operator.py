@@ -200,7 +200,7 @@ class VisualizerOperator(erdos.Operator):
             self._planning_world = None
         assert len(self.display_array) == len(self.window_titles), \
             "The display and titles differ."
-
+            
         # Save the flags.
         self._flags = flags
 

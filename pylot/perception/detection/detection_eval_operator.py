@@ -5,6 +5,7 @@ import time
 import erdos
 from erdos import Message, ReadStream, Timestamp, WriteStream
 
+from pylot.perception.messages import ObstaclesMessage
 import pylot.perception.detection.utils
 from pylot.utils import time_epoch_ms
 
@@ -20,7 +21,7 @@ class DetectionEvalOperator(erdos.Operator):
             received from the simulator.
         flags (absl.flags): Object to be used to access absl flags.
     """
-    def __init__(self, obstacles_stream, ground_obstacles_stream, flags):
+    def __init__(self, obstacles_stream, ground_obstacles_stream, obstacles_error_stream, flags):
         obstacles_stream.add_callback(self.on_obstacles)
         ground_obstacles_stream.add_callback(self.on_ground_obstacles)
         erdos.add_watermark_callback(
@@ -53,8 +54,7 @@ class DetectionEvalOperator(erdos.Operator):
         obstacles_error_stream = erdos.WriteStream()
         return [obstacles_error_stream]
 
-    def on_watermark(self, timestamp: Timestamp,
-                     obstacles_error_stream: WriteStream):
+    def on_watermark(self, timestamp, obstacles_error_stream):
         """Invoked when all input streams have received a watermark.
 
         Args:
@@ -73,6 +73,7 @@ class DetectionEvalOperator(erdos.Operator):
 
         sim_time = timestamp.coordinates[0]
         while len(self._detector_start_end_times) > 0:
+            print("INSIDE EVAL WATERMARK", timestamp)
             (end_time, start_time) = self._detector_start_end_times[0]
 
             if end_time <= game_time:
@@ -99,7 +100,8 @@ class DetectionEvalOperator(erdos.Operator):
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
                         
-                        det_ob.vis_error = err_val
+                        if (det_ob is not None):
+                            det_ob.vis_error = err_val
                         
                         ego_loc = ego_transform.location.as_numpy_array()
                         ob_actual_loc = ground_ob.transform.location.as_numpy_array()
@@ -114,8 +116,8 @@ class DetectionEvalOperator(erdos.Operator):
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
                 
-                obstacles_stream.send(ObstaclesMessage(timestamp, det_obstacles))
-                obstacles_stream.send(erdos.WatermarkMessage(timestamp))
+                obstacles_error_stream.send(ObstaclesMessage(timestamp, obstacles))
+                obstacles_error_stream.send(erdos.WatermarkMessage(timestamp))
             else:
                 # The remaining entries require newer ground obstacles.
                 break
