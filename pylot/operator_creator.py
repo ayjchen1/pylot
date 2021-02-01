@@ -800,7 +800,7 @@ def add_visualizer(pose_stream=None,
                    camera_streams=None, # MULTIPLE
                    tl_camera_stream=None,
                    prediction_camera_stream=None,
-                   depth_stream=None, # MULTIPLE
+                   depth_streams=None, # MULTIPLE
                    point_cloud_streams=None, # MULTIPLE
                    segmentation_stream=None,
                    imu_stream=None,
@@ -830,26 +830,34 @@ def add_visualizer(pose_stream=None,
         point_cloud_stream = point_cloud_streams[i]
         depth_stream = depth_streams[i]
 
+        # visualize
         if (camera_stream is None
             or not (FLAGS.visualize_rgb_camera
                     or FLAGS.visualize_detected_obstacles
                     or FLAGS.visualize_detected_traffic_lights
                     or FLAGS.visualize_tracked_obstacles
                     or FLAGS.visualize_waypoints)):
+            print("ERROR WITH CAMERA STREAM")
             camera_stream = erdos.IngestStream()
             streams_to_send_top_on.append(camera_stream)
 
+        # visualize
         if obstacles_stream is None or not FLAGS.visualize_detected_obstacles:
+            print("ERROR WITH OBSTACLES STREAM")
             obstacles_stream = erdos.IngestStream()
             streams_to_send_top_on.append(obstacles_stream)
+
+        # visualize
         if obstacles_error_stream is None or not FLAGS.visualize_detected_obstacles:
             print("ERROR WITH OBSTACLES ERROR STREAM")
             obstacles_error_stream = erdos.IngestStream()
             streams_to_send_top_on.append(obstacles_error_stream)
 
+        # ingest
         if point_cloud_stream is None or not FLAGS.visualize_lidar:
             point_cloud_stream = erdos.IngestStream()
             streams_to_send_top_on.append(point_cloud_stream)
+        # ingest
         if depth_stream is None or not FLAGS.visualize_depth_camera:
             depth_stream = erdos.IngestStream()
             streams_to_send_top_on.append(depth_stream)
@@ -857,6 +865,8 @@ def add_visualizer(pose_stream=None,
     if pose_stream is None:
         pose_stream = erdos.IngestStream()
         streams_to_send_top_on.append(pose_stream)
+        
+    # ingest everything \/
     if segmentation_stream is None or not FLAGS.visualize_segmentation:
         segmentation_stream = erdos.IngestStream()
         streams_to_send_top_on.append(segmentation_stream)
