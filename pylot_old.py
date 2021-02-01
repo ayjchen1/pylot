@@ -15,8 +15,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_list('goal_location', '234, 59, 39', 'Ego-vehicle goal location')
 
 # The location of the center camera relative to the ego-vehicle.
-FRONT_CAMERA_LOCATION = pylot.utils.Location(1.3, 0.0, 1.8) # x -> into the screen, y -> left/right, z -> up/down
-BACK_CAMERA_LOCATION = pylot.utils.Location(-1.3, 0.0, 1.8)
+CENTER_CAMERA_LOCATION = pylot.utils.Location(1.3, 0.0, 1.8)
+
 
 def add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
                              pose_stream_for_control,
@@ -44,71 +44,10 @@ def add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
         pylot.operator_creator.add_control_evaluation(
             pose_stream_for_control, waypoints_stream_for_control)
 
-def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms):
-    """     
-    Adds a front camera and a back camera to the vehicle
-    """
-    rgb_camera_streams = []
-    rgb_camera_setups = []
-    depth_camera_streams = []
-    segmented_camera_streams = []
-    point_cloud_streams = []
-    lidar_setups = []
-    depth_streams = []
-
-    for transform in transforms:
-        (cur_camera_stream, notify_rgb_stream,
-         cur_camera_setup) = pylot.operator_creator.add_rgb_camera(
-             transform, vehicle_id_stream, release_sensor_stream)
-        notify_streams.append(notify_rgb_stream)
-        rgb_camera_streams.append(cur_camera_stream)
-        rgb_camera_setups.append(cur_camera_setup)
-
-        if pylot.flags.must_add_depth_camera_sensor():
-            (depth_camera_stream, notify_depth_stream,
-             depth_camera_setup) = pylot.operator_creator.add_depth_camera(
-                 transform, vehicle_id_stream, release_sensor_stream)     
-        else:
-            depth_camera_stream = None
-        depth_camera_streams.append(depth_camera_stream)
-
-        if pylot.flags.must_add_segmented_camera_sensor():
-            (ground_segmented_stream, notify_segmented_stream,
-             _) = pylot.operator_creator.add_segmented_camera(
-                 transform, vehicle_id_stream, release_sensor_stream)
-        else:
-            ground_segmented_stream = None
-        segmented_camera_streams.append(ground_segmented_stream)
-
-        if pylot.flags.must_add_lidar_sensor():
-            # Place LiDAR sensor in the same location as the center camera.
-            (point_cloud_stream, notify_lidar_stream,
-             lidar_setup) = pylot.operator_creator.add_lidar(
-                 transform, vehicle_id_stream, release_sensor_stream)
-        else:
-            point_cloud_stream = None
-            lidar_setup = None
-        point_cloud_streams.append(point_cloud_stream)
-        lidar_setups.append(lidar_setup)
-
-        if FLAGS.obstacle_location_finder_sensor == 'lidar':
-            depth_stream = point_cloud_stream
-            # Camera sensors are slower than the lidar sensor.
-            notify_streams.append(notify_lidar_stream)
-        elif FLAGS.obstacle_location_finder_sensor == 'depth_camera':
-            depth_stream = depth_camera_stream
-            notify_streams.append(notify_depth_stream)
-        else:
-            raise ValueError(
-                'Unknown --obstacle_location_finder_sensor value {}'.format(
-                    FLAGS.obstacle_location_finder_sensor))
-        depth_streams.append(depth_stream)
-
-    return rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams
 
 def driver():
-    #transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-15))
-
+    transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION,
+                                      pylot.utils.Rotation(pitch=-15))
     streams_to_send_top_on = []
     control_loop_stream = erdos.LoopStream()
     time_to_decision_loop_stream = erdos.LoopStream()
@@ -138,12 +77,43 @@ def driver():
     )
 
     # Add sensors.
-    front_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-15))
-    back_transform = pylot.utils.Transform(BACK_CAMERA_LOCATION, pylot.utils.Rotation(pitch=195)) # CORRECT ROTATION?
+    (center_camera_stream, notify_rgb_stream,
+     center_camera_setup) = pylot.operator_creator.add_rgb_camera(
+         transform, vehicle_id_stream, release_sensor_stream)
+    notify_streams.append(notify_rgb_stream)
+    if pylot.flags.must_add_depth_camera_sensor():
+        (depth_camera_stream, notify_depth_stream,
+         depth_camera_setup) = pylot.operator_creator.add_depth_camera(
+             transform, vehicle_id_stream, release_sensor_stream)
+    else:
+        depth_camera_stream = None
+    if pylot.flags.must_add_segmented_camera_sensor():
+        (ground_segmented_stream, notify_segmented_stream,
+         _) = pylot.operator_creator.add_segmented_camera(
+             transform, vehicle_id_stream, release_sensor_stream)
+    else:
+        ground_segmented_stream = None
 
-    transforms = [front_transform, back_transform]
-    rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams = \
-            add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms)
+    if pylot.flags.must_add_lidar_sensor():
+        # Place LiDAR sensor in the same location as the center camera.
+        (point_cloud_stream, notify_lidar_stream,
+         lidar_setup) = pylot.operator_creator.add_lidar(
+             transform, vehicle_id_stream, release_sensor_stream)
+    else:
+        point_cloud_stream = None
+        lidar_setup = None
+
+    if FLAGS.obstacle_location_finder_sensor == 'lidar':
+        depth_stream = point_cloud_stream
+        # Camera sensors are slower than the lidar sensor.
+        notify_streams.append(notify_lidar_stream)
+    elif FLAGS.obstacle_location_finder_sensor == 'depth_camera':
+        depth_stream = depth_camera_stream
+        notify_streams.append(notify_depth_stream)
+    else:
+        raise ValueError(
+            'Unknown --obstacle_location_finder_sensor value {}'.format(
+                FLAGS.obstacle_location_finder_sensor))
 
     imu_stream = None
     if pylot.flags.must_add_imu_sensor():
@@ -159,81 +129,48 @@ def driver():
                                   rotation=pylot.utils.Rotation()),
             vehicle_id_stream)
 
-# ----------------------------------------------------------------------------------
-
-    #IGNORE
-    if FLAGS.localization: 
+    if FLAGS.localization:
         pose_stream = pylot.operator_creator.add_localization(
             imu_stream, gnss_stream, pose_stream)
 
-    # for each camera
-    obstacle_streams = []
-    perfect_obstacles_streams = []
-    obstacles_errors_streams = []
-    for i in range(len(transforms)):
-        transform = transforms[i]
-        rgb_camera_stream = rgb_camera_streams[i]
-        rgb_camera_setup = rgb_camera_setups[i]
-        depth_camera_stream = depth_camera_streams[i]
-        ground_segmented_stream = segmented_camera_streams[i]
-        point_cloud_streams = point_cloud_streams[i]
-        lidar_setup = lidar_setups[i]
-        depth_stream = depth_streams[i]        
+    obstacles_stream, perfect_obstacles_stream, obstacles_error_stream = \
+        pylot.component_creator.add_obstacle_detection(
+            center_camera_stream, center_camera_setup, pose_stream,
+            depth_stream, depth_camera_stream, ground_segmented_stream,
+            ground_obstacles_stream, ground_speed_limit_signs_stream,
+            ground_stop_signs_stream, time_to_decision_loop_stream)
 
-        obstacles_stream, perfect_obstacles_stream, obstacles_error_stream = \
-            pylot.component_creator.add_obstacle_detection(
-                rgb_camera_stream, rgb_camera_setup, pose_stream,
-                depth_stream, depth_camera_stream, ground_segmented_stream,
-                ground_obstacles_stream, ground_speed_limit_signs_stream,
-                ground_stop_signs_stream, time_to_decision_loop_stream)
-
-    # ------------------------------------------------------------------------
-    # ------------------------------------------------------------------------
-    # ------------------------------------------------------------------------
-    # ------------------------------------------------------------------------
-    # add all of the other operators (mostly irrelevant)
-    center_camera_stream = rgb_camera_streams[0]
-    center_camera_setup = rgb_camera_setups[0]
-    ground_segmented_stream = segmented_camera_streams[0]
-    depth_stream = depth_streams[0]
-
-    tl_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION,
-                                        pylot.utils.Rotation())
-    # = ground, = None
+    tl_transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION,
+                                         pylot.utils.Rotation())
     traffic_lights_stream, tl_camera_stream = \
         pylot.component_creator.add_traffic_light_detection(
             tl_transform, vehicle_id_stream, release_sensor_stream,
             pose_stream, depth_stream, ground_traffic_lights_stream)
 
-    # = None
     lane_detection_stream = pylot.component_creator.add_lane_detection(
         center_camera_stream, pose_stream, open_drive_stream)
     if lane_detection_stream is None:
         lane_detection_stream = erdos.IngestStream()
         streams_to_send_top_on.append(lane_detection_stream)
 
-    # = None
     obstacles_tracking_stream = pylot.component_creator.add_obstacle_tracking(
         center_camera_stream, center_camera_setup, obstacles_stream,
         depth_stream, vehicle_id_stream, pose_stream, ground_obstacles_stream,
         time_to_decision_loop_stream)
 
-    # = None
     segmented_stream = pylot.component_creator.add_segmentation(
         center_camera_stream, ground_segmented_stream)
 
-    # = None
     depth_stream = pylot.component_creator.add_depth(transform,
                                                      vehicle_id_stream,
                                                      center_camera_setup,
                                                      depth_camera_stream)
 
-    #IGNORE
     if FLAGS.fusion:
         pylot.operator_creator.add_fusion(pose_stream, obstacles_stream,
                                           depth_stream,
                                           ground_obstacles_stream)
-    # = None, = None, = None
+
     prediction_stream, prediction_camera_stream, notify_prediction_stream = \
         pylot.component_creator.add_prediction(
             obstacles_tracking_stream, vehicle_id_stream, transform,
@@ -247,7 +184,6 @@ def driver():
     goal_location = pylot.utils.Location(float(FLAGS.goal_location[0]),
                                          float(FLAGS.goal_location[1]),
                                          float(FLAGS.goal_location[2]))
-
     waypoints_stream = pylot.component_creator.add_planning(
         goal_location, pose_stream, prediction_stream, traffic_lights_stream,
         lane_detection_stream, open_drive_stream, global_trajectory_stream,
@@ -271,7 +207,7 @@ def driver():
 
     control_stream = pylot.component_creator.add_control(
         pose_stream_for_control, waypoints_stream_for_control,
-        vehicle_id_stream, perfect_obstacles_streams[0])
+        vehicle_id_stream, perfect_obstacles_stream)
     control_loop_stream.set(control_stream)
 
     add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
@@ -279,7 +215,7 @@ def driver():
                              waypoints_stream_for_control)
 
     time_to_decision_stream = pylot.operator_creator.add_time_to_decision(
-        pose_stream, obstacles_streams[0])
+        pose_stream, obstacles_stream)
     time_to_decision_loop_stream.set(time_to_decision_stream)
 
     control_display_stream = None
