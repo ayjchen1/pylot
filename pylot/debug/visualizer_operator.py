@@ -206,11 +206,11 @@ class VisualizerOperator(erdos.Operator):
             bgr_msg = self.get_message(self._bgr_msg_queues[i], timestamp, msg_name)
             bgr_msgs.append(bgr_msg)
         
-        obstalce_error_msgs = []
+        obstacle_error_msgs = []
         for i in range(len(self._obstacle_error_msg_queues)):
             msg_name = "ObstacleError" + str(i)
             obstacle_error_msg = self.get_message(self._obstacle_error_msg_queues[i], timestamp, msg_name)
-            obstalce_error_msgs.append(obstacle_error_msg)
+            obstacle_error_msgs.append(obstacle_error_msg)
         
         control_msg = self.get_message(self._control_msgs, timestamp,
                                        "Control")
@@ -234,6 +234,7 @@ class VisualizerOperator(erdos.Operator):
                                                        obstacle_error_msg.obstacles,
                                                        ego_transform)
                 bgr_msg.frame.visualize(self.display, timestamp=timestamp)
+                break
     
         self.render_text(pose_msg.data, control_msg, timestamp)
 

@@ -865,7 +865,7 @@ def add_visualizer(pose_stream=None,
     if pose_stream is None:
         pose_stream = erdos.IngestStream()
         streams_to_send_top_on.append(pose_stream)
-        
+
     # ingest everything \/
     if segmentation_stream is None or not FLAGS.visualize_segmentation:
         segmentation_stream = erdos.IngestStream()
@@ -909,9 +909,9 @@ def add_visualizer(pose_stream=None,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
     erdos.connect(VisualizerOperator, op_config, [
-        pose_stream, camera_stream, tl_camera_stream, prediction_camera_stream,
-        depth_stream, point_cloud_stream, segmentation_stream, imu_stream,
-        obstacles_stream, obstacles_error_stream, traffic_lights_stream, tracked_obstacles_stream,
+        pose_stream, camera_streams, tl_camera_stream, prediction_camera_stream,
+        depth_streams, point_cloud_streams, segmentation_stream, imu_stream,
+        obstacles_streams, obstacles_error_streams, traffic_lights_stream, tracked_obstacles_stream,
         lane_detection_stream, prediction_stream, waypoints_stream,
         control_stream, control_display_stream
     ], pygame_display, FLAGS)
