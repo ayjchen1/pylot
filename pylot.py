@@ -271,7 +271,7 @@ def driver():
 
     control_stream = pylot.component_creator.add_control(
         pose_stream_for_control, waypoints_stream_for_control,
-        vehicle_id_stream, perfect_obstacles_stream)
+        vehicle_id_stream, perfect_obstacles_streams[0])
     control_loop_stream.set(control_stream)
 
     add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
@@ -279,7 +279,7 @@ def driver():
                              waypoints_stream_for_control)
 
     time_to_decision_stream = pylot.operator_creator.add_time_to_decision(
-        pose_stream, obstacles_stream)
+        pose_stream, obstacles_streams[0])
     time_to_decision_loop_stream.set(time_to_decision_stream)
 
     control_display_stream = None
