@@ -1,6 +1,9 @@
 """This module implements an operator for visualizing the state of
-the different pipeline components (e.g., detections, tracked obstacles,
-planning waypoints)."""
+the vehicle
+
+IMPORTANT: modified to accomodate multiple cameras and obstacle detection +
+error evaluation for each camera. other pipeline components have been
+temporarily omitted for sake of simplicity."""
 
 from collections import deque
 from functools import partial
@@ -27,7 +30,7 @@ class VisualizerOperator(erdos.Operator):
     This receives input data from almost the entire pipeline and renders the
     results of the operator currently chosen by the developer on the screen.
     
-    TODO: currently, b/c of the 15 stream limit, i limit this to obstacle
+    TODO: currently, b/c of the 15 stream limit, limit this to obstacle
     error stream visuals only -> eventually, merge with visualizer_operator_old.py
     to include all streams
     """
@@ -49,8 +52,9 @@ class VisualizerOperator(erdos.Operator):
             self._bgr_msg_queues.append(deque())
 
             rgb_camera_stream = rgb_camera_streams[i]
+            msg_name = "RGB" + str(i)
             rgb_camera_stream.add_callback(
-                partial(self.save, msg_type="RGB", queue=self._bgr_msg_queues[i]))
+                partial(self.save, msg_type=msg_name, queue=self._bgr_msg_queues[i]))
             visualize_streams.append(rgb_camera_stream)
 
         self._obstacle_error_msg_queues = []
@@ -58,8 +62,9 @@ class VisualizerOperator(erdos.Operator):
             self._obstacle_error_msg_queues.append(deque())
 
             obstacles_error_stream = obstacles_error_streams[i]
+            msg_name = "ObstacleError" + str(i)
             obstacles_error_stream.add_callback(
-                partial(self.save, msg_type="ObstacleError", queue=self._obstacle_error_msg_queues[i]))
+                partial(self.save, msg_type=msg_name, queue=self._obstacle_error_msg_queues[i]))
             visualize_streams.append(obstacles_error_stream)
 
         self._control_msgs = deque()
@@ -87,39 +92,12 @@ class VisualizerOperator(erdos.Operator):
         self.current_display = 0
         self.display_array = []
         self.window_titles = []
-        if flags.visualize_rgb_camera:
-            self.display_array.append("RGB")
-            self.window_titles.append("RGB Camera")
-        if flags.visualize_detected_obstacles: 
-            # include obstacles error here; todo: seperate into flags
-            self.display_array.append("ObstacleError")
-            self.window_titles.append("Detected obstacles")
-            #self.display_array.append("Obstacle")
-            #self.window_titles.append("Detected obstacles")
-        if flags.visualize_tracked_obstacles:
-            self.display_array.append("TrackedObstacle")
-            self.window_titles.append("Obstacle tracking")
-        if flags.visualize_detected_traffic_lights:
-            self.display_array.append("TLCamera")
-            self.window_titles.append("Detected traffic lights")
-        if flags.visualize_waypoints:
-            self.display_array.append("Waypoint")
-            self.window_titles.append("Planning")
-        if flags.visualize_prediction:
-            self.display_array.append("PredictionCamera")
-            self.window_titles.append("Prediction")
-        if flags.visualize_lidar:
-            self.display_array.append("PointCloud")
-            self.window_titles.append("LiDAR")
-        if flags.visualize_detected_lanes:
-            self.display_array.append("Lanes")
-            self.window_titles.append("Detected lanes")
-        if flags.visualize_depth_camera:
-            self.display_array.append("Depth")
-            self.window_titles.append("Depth Camera")
-        if flags.visualize_segmentation:
-            self.display_array.append("Segmentation")
-            self.window_titles.append("Segmentation")
+        if flags.visualize_detected_obstacles: # eventually refactor + combine w/ other flags
+            for i in range(len(obstacles_error_streams)):
+                display_name = "ObstacleError" + str(i)
+                self.display_array.append(display_name)
+                self.window_titles.append("Detected obstacles")
+
         if flags.visualize_world:
             self._planning_world = World(flags, self._logger)
             top_down_transform = pylot.utils.get_top_down_transform(
@@ -133,6 +111,7 @@ class VisualizerOperator(erdos.Operator):
             self.window_titles.append("Planning world")
         else:
             self._planning_world = None
+
         assert len(self.display_array) == len(self.window_titles), \
             "The display and titles differ."
             
@@ -218,12 +197,21 @@ class VisualizerOperator(erdos.Operator):
 
     def on_watermark(self, timestamp):
         self._logger.debug("@{}: received watermark.".format(timestamp))
+
         pose_msg = self.get_message(self._pose_msgs, timestamp, "Pose")
-        bgr_msg = self.get_message(self._bgr_msgs, timestamp, "BGR")
+
+        bgr_msgs = []
+        for i in range(len(self._bgr_msg_queues)):
+            msg_name = "BGR" + str(i)
+            bgr_msg = self.get_message(self._bgr_msg_queues[i], timestamp, msg_name)
+            bgr_msgs.append(bgr_msg)
         
-        obstacle_msg = None
-        # obstacle_msg = self.get_message(self._obstacle_msgs, timestamp, "Obstacle")
-        obstacle_error_msg = self.get_message(self._obstacle_error_msgs, timestamp, "ObstacleError")                
+        obstalce_error_msgs = []
+        for i in range(len(self._obstacle_error_msg_queues)):
+            msg_name = "ObstacleError" + str(i)
+            obstacle_error_msg = self.get_message(self._obstacle_error_msg_queues[i], timestamp, msg_name)
+            obstalce_error_msgs.append(obstacle_error_msg)
+        
         control_msg = self.get_message(self._control_msgs, timestamp,
                                        "Control")
         if pose_msg:
@@ -234,48 +222,19 @@ class VisualizerOperator(erdos.Operator):
         # Add the visualizations on world.
         if self._flags.visualize_pose:
             self._visualize_pose(ego_transform)
-        if self._flags.visualize_imu:
-            self._visualize_imu(imu_msg)
 
         sensor_to_display = self.display_array[self.current_display]
-        if sensor_to_display == "RGB" and bgr_msg:
-            bgr_msg.frame.visualize(self.display, timestamp=timestamp)
-        elif sensor_to_display == "Obstacle" and bgr_msg and obstacle_msg:
-            bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
-                                                       obstacle_msg.obstacles,
-                                                       ego_transform)
-            bgr_msg.frame.visualize(self.display, timestamp=timestamp)
-        elif sensor_to_display == "ObstacleError" and bgr_msg and obstacle_error_msg: # CHANGE W/ ERROR MESSAGE
-            bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
+        for i in range(len(self.display_array)):
+            sensor_name = "ObstacleError" + str(i)
+            bgr_msg = bgr_msgs[i]
+            obstacle_error_msg = obstacle_error_msgs[i]
+
+            if sensor_to_display == sensor_name and bgr_msg and obstacle_error_msg:
+                bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                        obstacle_error_msg.obstacles,
                                                        ego_transform)
-            bgr_msg.frame.visualize(self.display, timestamp=timestamp)
-        elif sensor_to_display == "PlanningWorld":
-            if prediction_camera_msg is None:
-                # Top-down prediction is not available. Show planning
-                # world on a black image.
-                black_img = np.zeros((self._bird_eye_camera_setup.height,
-                                      self._bird_eye_camera_setup.width, 3),
-                                     dtype=np.dtype("uint8"))
-                frame = CameraFrame(black_img, 'RGB',
-                                    self._bird_eye_camera_setup)
-            else:
-                frame = prediction_camera_msg.frame
-                frame.transform_to_cityscapes()
-            if lane_detection_msg:
-                lanes = lane_detection_msg.data
-            else:
-                lanes = None
-            self._planning_world.update(timestamp,
-                                        pose_msg.data,
-                                        prediction_msg.predictions,
-                                        traffic_light_msg.obstacles,
-                                        None,
-                                        lanes=lanes)
-            self._planning_world.update_waypoints(None, waypoint_msg.waypoints)
-            self._planning_world.draw_on_frame(frame)
-            frame.visualize(self.display, timestamp=timestamp)
-
+                bgr_msg.frame.visualize(self.display, timestamp=timestamp)
+    
         self.render_text(pose_msg.data, control_msg, timestamp)
 
     def run(self):
