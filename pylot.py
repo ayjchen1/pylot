@@ -167,7 +167,7 @@ def driver():
             imu_stream, gnss_stream, pose_stream)
 
     # for each camera
-    obstacle_streams = []
+    obstacles_streams = []
     perfect_obstacles_streams = []
     obstacles_errors_streams = []
     for i in range(len(transforms)):
@@ -286,10 +286,10 @@ def driver():
     if pylot.flags.must_visualize():
         control_display_stream, ingest_streams = \
             pylot.operator_creator.add_visualizer(
-                pose_stream, center_camera_stream, tl_camera_stream,
-                prediction_camera_stream, depth_camera_stream,
-                point_cloud_stream, segmented_stream, imu_stream,
-                obstacles_stream, obstacles_error_stream, traffic_lights_stream,
+                pose_stream, rgb_camera_streams, tl_camera_stream,
+                prediction_camera_stream, depth_camera_streams,
+                point_cloud_streams, segmented_stream, imu_stream,
+                obstacles_streams, obstacles_error_streams, traffic_lights_stream,
                 obstacles_tracking_stream, lane_detection_stream,
                 prediction_stream, waypoints_stream, control_stream)
         streams_to_send_top_on += ingest_streams
@@ -344,7 +344,6 @@ def main(args):
     except Exception:
         shutdown_pylot(node_handle, client, world)
         raise
-
 
 if __name__ == '__main__':
     app.run(main)
