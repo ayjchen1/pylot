@@ -196,8 +196,10 @@ def driver():
     # ------------------------------------------------------------------------
     # ------------------------------------------------------------------------
     # add all of the other operators (mostly irrelevant)
+    # just use the front camera for all other components
     center_camera_stream = rgb_camera_streams[0]
     center_camera_setup = rgb_camera_setups[0]
+    obstacles_stream = obstacles_streams[0]
     ground_segmented_stream = segmented_camera_streams[0]
     depth_stream = depth_streams[0]
 
@@ -227,7 +229,7 @@ def driver():
         center_camera_stream, ground_segmented_stream)
 
     # = None
-    depth_stream = pylot.component_creator.add_depth(transform,
+    depth_stream = pylot.component_creator.add_depth(front_transform,
                                                      vehicle_id_stream,
                                                      center_camera_setup,
                                                      depth_camera_stream)
@@ -240,7 +242,7 @@ def driver():
     # = None, = None, = None
     prediction_stream, prediction_camera_stream, notify_prediction_stream = \
         pylot.component_creator.add_prediction(
-            obstacles_tracking_stream, vehicle_id_stream, transform,
+            obstacles_tracking_stream, vehicle_id_stream, front_transform,
             release_sensor_stream, pose_stream, point_cloud_stream,
             lidar_setup)
     if prediction_stream is None:
@@ -273,6 +275,8 @@ def driver():
         waypoints_stream_for_control = waypoints_stream
         pose_stream_for_control = pose_stream
 
+
+    # synchronizing on front perfect obstacle stream -- is that correct?
     control_stream = pylot.component_creator.add_control(
         pose_stream_for_control, waypoints_stream_for_control,
         vehicle_id_stream, perfect_obstacles_streams[0])
