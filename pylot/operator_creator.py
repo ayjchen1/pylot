@@ -797,15 +797,15 @@ def add_trajectory_logging(obstacles_tracking_stream,
 
 
 def add_visualizer(pose_stream=None,
-                   camera_stream=None,
+                   camera_streams=None, # MULTIPLE
                    tl_camera_stream=None,
                    prediction_camera_stream=None,
-                   depth_stream=None,
-                   point_cloud_stream=None,
+                   depth_stream=None, # MULTIPLE
+                   point_cloud_streams=None, # MULTIPLE
                    segmentation_stream=None,
                    imu_stream=None,
-                   obstacles_stream=None,
-                   obstacles_error_stream=None,
+                   obstacles_streams=None, # MULTIPLE
+                   obstacles_error_streams=None, # MULTIPLE
                    traffic_lights_stream=None,
                    tracked_obstacles_stream=None,
                    lane_detection_stream=None,
@@ -820,37 +820,49 @@ def add_visualizer(pose_stream=None,
         (FLAGS.camera_image_width, FLAGS.camera_image_height),
         pygame.HWSURFACE | pygame.DOUBLEBUF)
     pygame.display.set_caption("Pylot")
+
     streams_to_send_top_on = []
-    if pose_stream is None:
-        pose_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(pose_stream)
-    if (camera_stream is None
+    print("INSIDE VISUALIZER OPERATOR CREATOR:", len(camera_streams))
+    for i in range(len(camera_streams)):
+        camera_stream = camera_streams[i]
+        obstacles_stream = obstacles_streams[i]
+        obstacles_error_stream = obstacles_error_streams[i]
+        point_cloud_stream = point_cloud_streams[i]
+        depth_stream = depth_streams[i]
+
+        if (camera_stream is None
             or not (FLAGS.visualize_rgb_camera
                     or FLAGS.visualize_detected_obstacles
                     or FLAGS.visualize_detected_traffic_lights
                     or FLAGS.visualize_tracked_obstacles
                     or FLAGS.visualize_waypoints)):
-        camera_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(camera_stream)
-    if depth_stream is None or not FLAGS.visualize_depth_camera:
-        depth_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(depth_stream)
-    if point_cloud_stream is None or not FLAGS.visualize_lidar:
-        point_cloud_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(point_cloud_stream)
+            camera_stream = erdos.IngestStream()
+            streams_to_send_top_on.append(camera_stream)
+
+        if obstacles_stream is None or not FLAGS.visualize_detected_obstacles:
+            obstacles_stream = erdos.IngestStream()
+            streams_to_send_top_on.append(obstacles_stream)
+        if obstacles_error_stream is None or not FLAGS.visualize_detected_obstacles:
+            print("ERROR WITH OBSTACLES ERROR STREAM")
+            obstacles_error_stream = erdos.IngestStream()
+            streams_to_send_top_on.append(obstacles_error_stream)
+
+        if point_cloud_stream is None or not FLAGS.visualize_lidar:
+            point_cloud_stream = erdos.IngestStream()
+            streams_to_send_top_on.append(point_cloud_stream)
+        if depth_stream is None or not FLAGS.visualize_depth_camera:
+            depth_stream = erdos.IngestStream()
+            streams_to_send_top_on.append(depth_stream)
+
+    if pose_stream is None:
+        pose_stream = erdos.IngestStream()
+        streams_to_send_top_on.append(pose_stream)
     if segmentation_stream is None or not FLAGS.visualize_segmentation:
         segmentation_stream = erdos.IngestStream()
         streams_to_send_top_on.append(segmentation_stream)
     if imu_stream is None or not FLAGS.visualize_imu:
         imu_stream = erdos.IngestStream()
         streams_to_send_top_on.append(imu_stream)
-    if obstacles_stream is None or not FLAGS.visualize_detected_obstacles:
-        obstacles_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(obstacles_stream)
-    if obstacles_error_stream is None or not FLAGS.visualize_detected_obstacles:
-        print("============= ! ERROR WITH OBSTACLES ERROR STREAM")
-        obstacles_error_stream = erdos.IngestStream()
-        streams_to_send_top_on.append(obstacles_error_stream)
     if tl_camera_stream is None or not FLAGS.visualize_detected_traffic_lights:
         tl_camera_stream = erdos.IngestStream()
         streams_to_send_top_on.append(tl_camera_stream)
