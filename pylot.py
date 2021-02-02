@@ -176,7 +176,7 @@ def driver():
         rgb_camera_setup = rgb_camera_setups[i]
         depth_camera_stream = depth_camera_streams[i]
         ground_segmented_stream = segmented_camera_streams[i]
-        point_cloud_streams = point_cloud_streams[i]
+        point_cloud_stream = point_cloud_streams[i]
         lidar_setup = lidar_setups[i]
         depth_stream = depth_streams[i]        
 
@@ -187,6 +187,8 @@ def driver():
                 ground_obstacles_stream, ground_speed_limit_signs_stream,
                 ground_stop_signs_stream, time_to_decision_loop_stream)
         
+        print("CREATED COMPONENTS: ", transform.location)
+    
         obstacles_streams.append(obstacles_stream)
         perfect_obstacles_streams.append(perfect_obstacles_stream)
         obstacles_error_streams.append(obstacles_error_stream)
@@ -201,6 +203,7 @@ def driver():
     center_camera_setup = rgb_camera_setups[0]
     obstacles_stream = obstacles_streams[0]
     ground_segmented_stream = segmented_camera_streams[0]
+    point_cloud_stream = point_cloud_streams[0]
     depth_stream = depth_streams[0]
 
     tl_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION,
