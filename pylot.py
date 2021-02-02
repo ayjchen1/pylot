@@ -169,7 +169,7 @@ def driver():
     # for each camera
     obstacles_streams = []
     perfect_obstacles_streams = []
-    obstacles_errors_streams = []
+    obstacles_error_streams = []
     for i in range(len(transforms)):
         transform = transforms[i]
         rgb_camera_stream = rgb_camera_streams[i]
