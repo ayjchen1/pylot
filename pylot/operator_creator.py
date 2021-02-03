@@ -2,6 +2,7 @@ from absl import flags
 
 import erdos
 
+import pylot.flags
 import pylot.utils
 
 # TODO: Hack to avoid a tensorflow import error.
@@ -406,6 +407,27 @@ def add_planning(pose_stream,
     return waypoints_stream
 
 
+    bird_eye_camera_setup = RGBCameraSetup('bird_eye_camera', 
+                FLAGS.camera_image_width, FLAGS.camera_image_height, 
+                top_down_transform, 90)
+
+def add_bird_camera(transform,
+                   vehicle_id_stream,
+                   release_sensor_stream,
+                   name='bird_eye_camera',
+                   fov=90):
+    from pylot.drivers.sensor_setup import RGBCameraSetup
+
+    bird_camera_setup = None
+    camera_stream, notify_reading_stream = None, None
+    if (pylot.flags.must_visualize()):
+        bird_camera_setup = RGBCameraSetup('bird_eye_camera', 
+                        FLAGS.camera_image_width, FLAGS.camera_image_height, 
+                        top_down_transform, 90)
+        camera_stream, notify_reading_stream = _add_camera_driver(
+            vehicle_id_stream, release_sensor_stream, bird_camera_setup)
+    return (camera_stream, notify_reading_stream, bird_camera_setup)
+
 def add_rgb_camera(transform,
                    vehicle_id_stream,
                    release_sensor_stream,
@@ -798,6 +820,7 @@ def add_trajectory_logging(obstacles_tracking_stream,
 
 def add_visualizer(pose_stream=None,
                    camera_streams=None, # MULTIPLE
+                   bird_camera_stream=None,
                    tl_camera_stream=None,
                    prediction_camera_stream=None,
                    depth_streams=None, # MULTIPLE
@@ -871,6 +894,10 @@ def add_visualizer(pose_stream=None,
     if pose_stream is None:
         pose_stream = erdos.IngestStream()
         streams_to_send_top_on.append(pose_stream)
+    
+    if bird_camera_stream is None:
+        bird_camera_stream = erdos.IngestStream()
+        streams_to_send_top_on.append(bird_camera_stream)
 
     # ingest everything \/
     if segmentation_stream is None or not FLAGS.visualize_segmentation:
@@ -915,7 +942,7 @@ def add_visualizer(pose_stream=None,
                                      csv_log_file_name=FLAGS.csv_log_file_name,
                                      profile_file_name=FLAGS.profile_file_name)
     erdos.connect(VisualizerOperator, op_config, [
-        pose_stream, *camera_streams, tl_camera_stream, prediction_camera_stream,
+        pose_stream, *camera_streams, bird_camera_stream, tl_camera_stream, prediction_camera_stream,
         depth_streams[0], point_cloud_streams[0], segmentation_stream, imu_stream,
         obstacles_streams[0], *obstacles_error_streams, traffic_lights_stream, tracked_obstacles_stream,
         lane_detection_stream, prediction_stream, waypoints_stream,

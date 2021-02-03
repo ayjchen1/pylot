@@ -34,7 +34,7 @@ class VisualizerOperator(erdos.Operator):
     error stream visuals only -> eventually, merge with visualizer_operator_old.py
     to include all streams
     """
-    def __init__(self, pose_stream, front_camera_stream, back_camera_stream, tl_camera_stream,
+    def __init__(self, pose_stream, front_camera_stream, back_camera_stream, bird_camera_stream, tl_camera_stream,
                  prediction_camera_stream, depth_camera_stream,
                  point_cloud_stream, segmentation_stream, imu_stream,
                  obstacles_stream, front_obstacles_error, back_obstacles_error, traffic_lights_stream,
@@ -42,6 +42,7 @@ class VisualizerOperator(erdos.Operator):
                  prediction_stream, waypoints_stream, control_stream,
                  display_control_stream, pygame_display, flags):
         visualize_streams = []
+
         self._pose_msgs = deque()
         pose_stream.add_callback(
             partial(self.save, msg_type="Pose", queue=self._pose_msgs))
@@ -68,6 +69,11 @@ class VisualizerOperator(erdos.Operator):
             obstacles_error_stream.add_callback(
                 partial(self.save, msg_type=msg_name, queue=self._obstacle_error_msg_queues[i]))
             visualize_streams.append(obstacles_error_stream)
+
+        self._bird_msgs = deque()
+        bird_camera_stream.add_callback(
+            partial(self.save, msg_type="BirdEye", queue=self._bird_msgs))
+        visualize_streams.append(bird_camera_stream)
 
         self._control_msgs = deque()
         control_stream.add_callback(
@@ -99,20 +105,9 @@ class VisualizerOperator(erdos.Operator):
                 display_name = "ObstacleError" + str(i)
                 self.display_array.append(display_name)
                 self.window_titles.append("Detected obstacles")
-
-        if flags.visualize_world:
-            self._planning_world = World(flags, self._logger)
-            top_down_transform = pylot.utils.get_top_down_transform(
-                pylot.utils.Transform(pylot.utils.Location(),
-                                      pylot.utils.Rotation()),
-                flags.top_down_camera_altitude)
-            self._bird_eye_camera_setup = RGBCameraSetup(
-                'bird_eye_camera', flags.camera_image_width,
-                flags.camera_image_height, top_down_transform, 90)
-            self.display_array.append("PlanningWorld")
-            self.window_titles.append("Planning world")
-        else:
-            self._planning_world = None
+            
+            self.display_array.append("BirdEye")
+            self.window_titles.append("Bird's Eye View")
 
         assert len(self.display_array) == len(self.window_titles), \
             "The display and titles differ."
@@ -121,7 +116,7 @@ class VisualizerOperator(erdos.Operator):
         self._flags = flags
 
     @staticmethod
-    def connect(pose_stream, front_camera_stream, back_camera_stream, tl_camera_stream,
+    def connect(pose_stream, front_camera_stream, back_camera_stream, bird_camera_stream, tl_camera_stream,
                 prediction_camera_stream, depth_stream, point_cloud_stream,
                 segmentation_stream, imu_stream, obstacles_stream,
                 front_obstacles_error, back_obstacles_error, 
@@ -214,6 +209,8 @@ class VisualizerOperator(erdos.Operator):
             msg_name = "ObstacleError" + str(i)
             obstacle_error_msg = self.get_message(self._obstacle_error_msg_queues[i], timestamp, msg_name)
             obstacle_error_msgs.append(obstacle_error_msg)
+
+        bird_msg = self.get_message(self._bird_msgs, timestamp, "BirdEye")
         
         control_msg = self.get_message(self._control_msgs, timestamp,
                                        "Control")
@@ -238,6 +235,9 @@ class VisualizerOperator(erdos.Operator):
                                                        ego_transform)
                 bgr_msg.frame.visualize(self.display, timestamp=timestamp)
                 break
+        
+        if (sensor_to_display == "BirdEye" and bird_msg):
+            bird_msg.frame.visualize(self.display, timestamp=timestamp)
     
         self.render_text(pose_msg.data, control_msg, timestamp)
 

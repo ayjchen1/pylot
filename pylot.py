@@ -8,6 +8,7 @@ import pylot.flags
 import pylot.component_creator  # noqa: I100
 import pylot.operator_creator
 import pylot.utils
+from pylot.drivers.sensor_setup import RGBCameraSetup
 from pylot.simulation.utils import get_world, set_asynchronous_mode
 
 FLAGS = flags.FLAGS
@@ -145,6 +146,17 @@ def driver():
     rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams = \
             add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms)
 
+    # add a birds-eye camera
+    
+    pylot.operator_creator()
+    top_down_transform = pylot.utils.get_top_down_transform(
+                pylot.utils.Transform(pylot.utils.Location(),
+                                      pylot.utils.Rotation()),
+                                      FLAGS.top_down_camera_altitude)
+    (bird_camera_stream, notify_bird_stream, bird_setup) = \
+        pylot.operator_creator.add_bird_camera(top_down_transform, vehicle_id_stream, release_sensor_stream)
+    notify_streams.append(notify_bird_stream)
+        
     imu_stream = None
     if pylot.flags.must_add_imu_sensor():
         (imu_stream, _) = pylot.operator_creator.add_imu(
@@ -297,7 +309,7 @@ def driver():
     if pylot.flags.must_visualize():
         control_display_stream, ingest_streams = \
             pylot.operator_creator.add_visualizer(
-                pose_stream, rgb_camera_streams, tl_camera_stream,
+                pose_stream, rgb_camera_streams, bird_camera_stream, tl_camera_stream,
                 prediction_camera_stream, depth_camera_streams,
                 point_cloud_streams, segmented_stream, imu_stream,
                 obstacles_streams, obstacles_error_streams, traffic_lights_stream,
