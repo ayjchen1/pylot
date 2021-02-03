@@ -148,7 +148,6 @@ def driver():
 
     # add a birds-eye camera
     
-    pylot.operator_creator()
     top_down_transform = pylot.utils.get_top_down_transform(
                 pylot.utils.Transform(pylot.utils.Location(),
                                       pylot.utils.Rotation()),
