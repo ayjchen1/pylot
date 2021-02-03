@@ -140,7 +140,7 @@ def driver():
 
     # Add sensors.
     front_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-5))
-    back_transform = pylot.utils.Transform(BACK_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-5, yaw=180)) # CORRECT ROTATION?
+    back_transform = pylot.utils.Transform(BACK_CAMERA_LOCATION, pylot.utils.Rotation(pitch=0, yaw=180)) # CORRECT ROTATION?
 
     transforms = [front_transform, back_transform]
     rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams = \

@@ -406,12 +406,7 @@ def add_planning(pose_stream,
     ], FLAGS)
     return waypoints_stream
 
-
-    bird_eye_camera_setup = RGBCameraSetup('bird_eye_camera', 
-                FLAGS.camera_image_width, FLAGS.camera_image_height, 
-                top_down_transform, 90)
-
-def add_bird_camera(transform,
+def add_bird_camera(top_down_transform,
                    vehicle_id_stream,
                    release_sensor_stream,
                    name='bird_eye_camera',

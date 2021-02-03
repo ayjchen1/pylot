@@ -224,7 +224,7 @@ class VisualizerOperator(erdos.Operator):
             self._visualize_pose(ego_transform)
 
         sensor_to_display = self.display_array[self.current_display]
-        for i in range(len(self.display_array)):
+        for i in range(len(bgr_msgs)):
             sensor_name = "ObstacleError" + str(i)
             bgr_msg = bgr_msgs[i]
             obstacle_error_msg = obstacle_error_msgs[i]
