@@ -108,7 +108,8 @@ def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transf
     return rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams
 
 def driver():
-    #transform = pylot.utils.Transform(CENTER_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-15))
+    csv_logger = erdos.utils.setup_csv_logging("head-csv", FLAGS.csv_log_file_name)
+    csv_logger.info('TIME, SIMTIME, CAMERA, GROUNDID, LABEL, X, Y, Z, ERROR')
 
     streams_to_send_top_on = []
     control_loop_stream = erdos.LoopStream()
@@ -142,6 +143,7 @@ def driver():
     front_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-5))
     back_transform = pylot.utils.Transform(BACK_CAMERA_LOCATION, pylot.utils.Rotation(pitch=0, yaw=180)) # CORRECT ROTATION?
 
+    camera_names = ["FRONT", "BACK"]
     transforms = [front_transform, back_transform]
     rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams = \
             add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms)
@@ -190,13 +192,14 @@ def driver():
         point_cloud_stream = point_cloud_streams[i]
         lidar_setup = lidar_setups[i]
         depth_stream = depth_streams[i]        
+        eval_name = camera_names[i] + "-eval"
 
         obstacles_stream, perfect_obstacles_stream, obstacles_error_stream = \
             pylot.component_creator.add_obstacle_detection(
                 rgb_camera_stream, rgb_camera_setup, pose_stream,
                 depth_stream, depth_camera_stream, ground_segmented_stream,
                 ground_obstacles_stream, ground_speed_limit_signs_stream,
-                ground_stop_signs_stream, time_to_decision_loop_stream)
+                ground_stop_signs_stream, time_to_decision_loop_stream, eval_name)
         
         print("CREATED COMPONENTS: ", transform.location)
     

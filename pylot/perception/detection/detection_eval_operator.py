@@ -108,8 +108,8 @@ class DetectionEvalOperator(erdos.Operator):
                         relative_dist = ob_actual_loc - ego_loc
 
                         # (time, time, object label, object id, x_obj - x_ego, error)
-                        self._csv_logger.info('{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
-                            time_epoch_ms(), sim_time, ground_ob.id, ground_ob.label,
+                        self._csv_logger.info('{},{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
+                            time_epoch_ms(), sim_time, self.config.name, ground_ob.id, ground_ob.label,
                             relative_dist[0], relative_dist[1], relative_dist[2], 
                             err_val))
 

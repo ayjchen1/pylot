@@ -14,7 +14,8 @@ def add_obstacle_detection(center_camera_stream,
                            ground_obstacles_stream=None,
                            ground_speed_limit_signs_stream=None,
                            ground_stop_signs_stream=None,
-                           time_to_decision_stream=None):
+                           time_to_decision_stream=None,
+                           eval_name="detection_eval_operator"):
     """Adds operators for obstacle detection to the data-flow.
 
     If the `--perfect_obstacle_detection` flag is set, the method adds a
@@ -57,6 +58,7 @@ def add_obstacle_detection(center_camera_stream,
         :py:class:`~pylot.perception.messages.ObstaclesMessage` messages are
         published.
     """
+    print("INSIDE COMPONENT CREATOR")
     obstacles_stream = None
     perfect_obstacles_stream = None
     obstacles_error_stream = None
@@ -91,7 +93,7 @@ def add_obstacle_detection(center_camera_stream,
             ground_speed_limit_signs_stream, ground_stop_signs_stream)
         if FLAGS.evaluate_obstacle_detection:
             obstacles_error_stream = pylot.operator_creator.add_detection_evaluation(
-                obstacles_stream, perfect_obstacles_stream)
+                obstacles_stream, perfect_obstacles_stream, name=eval_name)
         if FLAGS.perfect_obstacle_detection:
             obstacles_stream = perfect_obstacles_stream
 
