@@ -540,7 +540,7 @@ def get_errors(ground_obstacles, det_obstacles):
     for i in range(len(extra_ground)):
         ground_idx = extra_ground[i]
 
-        errs.append((ground_obstacles[ground_idx], None, -1))
+        errs.append((ground_obstacles[ground_idx], None, 1000000))
 
     return errs
 
