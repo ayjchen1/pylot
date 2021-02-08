@@ -43,17 +43,17 @@ def read_data(filename):
 
     Returns a pandas dataframe split into train (70) and test (30)
 
-    normalize inputs? or no?
+    normalize inputs/outputs? or no?
 
     """
-    filepath = os.path.join(dirname, filename)
+    filepath = os.path.join(DIRNAME, filename)
     df = pd.read_csv(filepath)
 
     X = df.iloc[:, -4:-1]
     y = df.iloc[:, -1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, stratify=y)
 
-    X_train, X_test, y_train, y_test = X_train.astype(float), X_test.astype(float),
+    X_train, X_test, y_train, y_test = X_train.astype(float), X_test.astype(float), \
                                         y_train.astype(float), y_test.astype(float)
 
     return X_train, X_test, y_train, y_test
@@ -112,7 +112,7 @@ def run_nn(loader):
 
 
 if __name__=="__main__":
-    X_train, X_test, y_train, y_test = read_data("../vis_data/vis.csv")
+    X_train, X_test, y_train, y_test = read_data("vis.csv")
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
 
