@@ -1,7 +1,6 @@
 *~
 *.json
 *.pyc
-*.ipynb
 dependencies/
 pylot/prediction/prediction/
 
