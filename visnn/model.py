@@ -1,17 +1,33 @@
 import torch
 import torch.nn.functional as F
 
-from torch.autograd import Variable
-import torch.nn.functional as F
-import torch.utils.data as Data
-
+import matplotlib.pylot as plt
+import pandas as pd
 import numpy as np
 
 torch.manual_seed(1)    # reproducible
 BATCH_SIZE = 64
-EPOCH = 50
+NUMEPOCH = 50
 
-def process_data():
+def read_data(filename):
+    """
+    Reads the visibility data (in csv format) from the filename
+    inside vis_data folder
+
+    Returns a pandas dataframe ?"
+
+    """
+    return []
+
+
+def process_data(vis_data):
+    """
+    Processes the data by stripping away extra info and leaving:
+        X: the (x, y, z) relative location of the obstacle to the ego vehicle
+        y: the visibility error/uncertainty
+    """
+    return 0
+
 
 def print_stats(epoch, step, loss_sum):
     loss_str = "EPOCH: {:2d}, STEP: {:5d}, LOSS: {:.4f}".format(epoch, step, loss_sum)
@@ -40,11 +56,11 @@ def run_nn():
             torch.nn.Linear(50, 1),
         )
 
-    criterion = torch.nn.MSELoss()
+    criterion = torch.nn.MSELoss() # (y - yhat)^2
     optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
     # train the neural net
-    for epoch in range(EPOCH):
+    for epoch in range(NUMEPOCH):
         loss_sum = 0
 
         for step, data in enumerate(loader):
