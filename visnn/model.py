@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
@@ -9,7 +11,7 @@ import seaborn as sns
 import sklearn
 from sklearn.model_selection import train_test_split
 
-torch.manual_seed(1)    # reproducible
+DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 10
 EPOCHS = 50
 LEARNING_RATE = 0.005
@@ -44,7 +46,8 @@ def read_data(filename):
     normalize inputs? or no?
 
     """
-    df = pd.read_csv(filename)
+    filepath = os.path.join(dirname, filename)
+    df = pd.read_csv(filepath)
 
     X = df.iloc[:, -4:-1]
     y = df.iloc[:, -1]
@@ -93,12 +96,12 @@ def run_nn(loader):
 
         for step, data in enumerate(loader):
             # find X, y
-            X_cur, y_cur = data
+            X_batch, y_batch = data
 
             optimizer.zero_grad()   # zero the optim gradients
 
-            prediction = net(X_cur)
-            loss = criterion(prediction, y_cur)
+            prediction = net(X_batch)
+            loss = criterion(prediction, y_batch)
             loss.backward()         # backprop
             optimizer.step()        # apply gradients
 
@@ -113,6 +116,7 @@ if __name__=="__main__":
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
 
+    print("============== BEGIN TRAINING =================")
     run_nn(train_loader)
 
 
