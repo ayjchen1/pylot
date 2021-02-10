@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import matplotlib.pylot as plt
 import pandas as pd
@@ -76,8 +77,7 @@ def print_stats(epoch, step, loss_sum):
     loss_str = "EPOCH: {:2d}, STEP: {:5d}, LOSS: {:.4f}".format(epoch, step, loss_sum)
     print(loss_str)
 
-def run_nn(loader):
-
+def run_nn(writer, loader):
     # define neural net architecture
     net = torch.nn.Sequential(
             torch.nn.Linear(3, 100),
@@ -85,6 +85,7 @@ def run_nn(loader):
             torch.nn.Linear(100, 50),
             torch.nn.LeakyReLU(),
             torch.nn.Linear(50, 1),
+            #torch.nn.ReLU() # clip off at 0?
         ).to(device)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
@@ -92,8 +93,6 @@ def run_nn(loader):
 
     # train the neural net
     for epoch in range(EPOCHS):
-        loss_sum = 0
-
         for step, data in enumerate(loader):
             # find X, y
             X_batch, y_batch = data
@@ -105,11 +104,9 @@ def run_nn(loader):
             loss.backward()         # backprop
             optimizer.step()        # apply gradients
 
-            loss_sum += loss.item()
-            if (step % 100 == 0):
-                print_stats(epoch, step, loss_sum)
-                loss_sum = 0
-
+            niter = (epoch + 1) * (step + 1)
+            writer.add_scalar("Loss/train", loss, niter)
+            print_stats(epoch + 1, step + 1, loss)
 
 if __name__=="__main__":
     X_train, X_test, y_train, y_test = read_data("vis.csv")
@@ -117,7 +114,10 @@ if __name__=="__main__":
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
 
     print("============== BEGIN TRAINING =================")
-    run_nn(train_loader)
+    writer = SummaryWriter()
+    run_nn(writer, train_loader)
+    writer.flush()
+    writer.close()
 
 
 
