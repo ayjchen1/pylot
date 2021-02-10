@@ -14,10 +14,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
-BATCH_SIZE = 10
+BATCH_SIZE = 5
 EPOCHS = 50
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.00001
 MOMENTUM = 0.9
+
+NLAYERS = 3
+LAYERDIMS = [3, 30, 15, 1]
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -38,6 +41,27 @@ class VisDataset(Dataset):
     def __len__(self):
         return len(self.X_data)
 
+class VisNet(torch.nn.Module):
+    """
+    Neural net for regression on visibility uncertainty based on
+    vehicle relative position (x, y, z)
+    """
+    def __init__(self):
+        super(VisNet, self).__init__()
+
+        self.linears = torch.nn.ModuleList([])
+
+        for i in range(NLAYERS):
+            layer = torch.nn.Linear(LAYERDIMS[i], LAYERDIMS[i + 1])
+            self.linears.append(layer)
+
+        self.relu = torch.nn.LeakyReLU()
+
+    def forward(self, x):
+        for i in range(NLAYERS):
+            x = self.relu(self.linears[i](x))
+        return x
+
 def read_data(filename):
     """
     Reads the visibility data (in csv format) from the filename
@@ -50,7 +74,7 @@ def read_data(filename):
     """
     filepath = os.path.join(DIRNAME, filename)
     df = pd.read_csv(filepath)
-    print(df.columns)
+    #print(df.columns)
     df = df[df.ERROR < 1000000.0] # temporary? ignores all rows with high errors to avoid
                                 # exploding loss values...
 
@@ -90,14 +114,8 @@ def print_stats(epoch, step, loss_sum):
 
 def run_nn(writer, loader):
     # define neural net architecture
-    net = torch.nn.Sequential(
-            torch.nn.Linear(3, 100),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(100, 50),
-            torch.nn.LeakyReLU(),
-            torch.nn.Linear(50, 1),
-            #torch.nn.ReLU() # clip off at 0?
-        )#.to(device)
+    net = VisNet()
+    print(net.linears)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
     optimizer = torch.optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM)
@@ -117,9 +135,10 @@ def run_nn(writer, loader):
             loss.backward()         # backprop
             optimizer.step()        # apply gradients
 
-            niter = (epoch + 1) * (step + 1)
+            niter = epoch * len(loader) + step
             writer.add_scalar("Loss/train", loss, niter)
             print_stats(epoch + 1, step + 1, loss)
+
 
 if __name__=="__main__":
     X_train, X_test, y_train, y_test = read_data("vis00.csv")
@@ -129,10 +148,8 @@ if __name__=="__main__":
     print("Y TRAINING")
     print(y_train)
 
-
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
-
 
     writer = SummaryWriter()
     run_nn(writer, train_loader)
