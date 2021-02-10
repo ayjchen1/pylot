@@ -82,9 +82,14 @@ def read_data(filename):
     y = df.iloc[:, -1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-    scaler = MinMaxScaler(feature_range=(-1, 1))
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    xscaler = MinMaxScaler(feature_range=(-1, 1))
+    X_train = xscaler.fit_transform(X_train)
+    X_test = xscaler.transform(X_test)
+
+    yscaler = MinMaxScaler()
+    print(y_train.values.reshape(-1, 1))
+    y_train = yscaler.fit_transform(y_train.values.reshape(-1, 1))
+    y_test = yscaler.transform(y_test.values.reshape(-1, 1))
 
     X_train, y_train = np.array(X_train), np.array(y_train)
     X_test, y_test = np.array(X_test), np.array(y_test)
@@ -150,8 +155,9 @@ if __name__=="__main__":
 
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
-
+"""
     writer = SummaryWriter()
     run_nn(writer, train_loader)
     writer.flush()
     writer.close()
+    """
