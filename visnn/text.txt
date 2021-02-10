@@ -1,0 +1,5 @@
+1. continuous fake data
+1/dist^2
+
+2. binary fake data (0.001 or 1000)
+    MSELoss

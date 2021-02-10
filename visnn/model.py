@@ -15,8 +15,8 @@ from sklearn.preprocessing import MinMaxScaler
 
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 5
-EPOCHS = 50
-LEARNING_RATE = 0.00001
+EPOCHS = 10000
+LEARNING_RATE = 0.0001
 MOMENTUM = 0.9
 
 NLAYERS = 3
@@ -57,10 +57,15 @@ class VisNet(torch.nn.Module):
 
         self.relu = torch.nn.LeakyReLU()
 
+        # linear(3, 30), relu, linear(30, 15), relu, linear(15, 1), relu
+
     def forward(self, x):
         for i in range(NLAYERS):
             x = self.relu(self.linears[i](x))
         return x
+
+def debug():
+    pass
 
 def read_data(filename):
     """
@@ -82,14 +87,20 @@ def read_data(filename):
     y = df.iloc[:, -1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
+    """
     xscaler = MinMaxScaler(feature_range=(-1, 1))
     X_train = xscaler.fit_transform(X_train)
     X_test = xscaler.transform(X_test)
+    """
+
+    """
+    clip y values above a value
 
     yscaler = MinMaxScaler()
-    print(y_train.values.reshape(-1, 1))
+    #print(y_train.values.reshape(-1, 1))
     y_train = yscaler.fit_transform(y_train.values.reshape(-1, 1))
     y_test = yscaler.transform(y_test.values.reshape(-1, 1))
+    """
 
     X_train, y_train = np.array(X_train), np.array(y_train)
     X_test, y_test = np.array(X_test), np.array(y_test)
@@ -113,39 +124,63 @@ def get_dataloader(dataset, batch_size):
                         num_workers=2)
     return loader
 
-def print_stats(epoch, step, loss_sum):
-    loss_str = "EPOCH: {:2d}, STEP: {:5d}, LOSS: {:.4f}".format(epoch, step, loss_sum)
-    print(loss_str)
-
-def run_nn(writer, loader):
+def run_nn(writer, trainloader, testloader):
     # define neural net architecture
     net = VisNet()
-    print(net.linears)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
-    optimizer = torch.optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM)
+    optimizer = torch.optim.Adam(net.parameters(), lr=LEARNING_RATE)
 
     print("============== BEGIN TRAINING =================")
     # train the neural net
     for epoch in range(EPOCHS):
-        for step, data in enumerate(loader):
+        trainloss = 0
+        valloss = 0
+
+        # training
+        for step, data in enumerate(trainloader):
             # find X, y
             X_batch, y_batch = data
+            y_batch = torch.clamp(y_batch, 0, 100)
 
             optimizer.zero_grad()   # zero the optim gradients
 
             prediction = net(X_batch)
+
             y_batch = y_batch.view(-1, 1)
             loss = criterion(prediction, y_batch)
+
             loss.backward()         # backprop
             optimizer.step()        # apply gradients
 
-            niter = epoch * len(loader) + step
-            writer.add_scalar("Loss/train", loss, niter)
-            print_stats(epoch + 1, step + 1, loss)
+            trainloss += loss
+
+        avg_trainloss = trainloss / len(trainloader)
+        writer.add_scalar("Loss/train", avg_trainloss, epoch)
+        print("EPOCH: {:2d}, TRAIN LOSS: {:.4f}".format(epoch, avg_trainloss))
+
+        ##################################################################
+
+        # compute validation loss
+        for step, data in enumerate(testloader):
+            # find X, y
+            X_batch, y_batch = data
+            y_batch = torch.clamp(y_batch, 0, 100)
+
+            prediction = net(X_batch)
+
+            y_batch = y_batch.view(-1, 1)
+            loss = criterion(prediction, y_batch)
+
+            valloss += loss
+
+        avg_valloss = valloss / len(testloader)
+        writer.add_scalar("Loss/validation", avg_valloss, epoch)
+        print("EPOCH: {:2d}, VAL LOSS: {:.4f}".format(epoch, avg_valloss))
 
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     X_train, X_test, y_train, y_test = read_data("vis00.csv")
 
     print("X TRAINING")
@@ -155,9 +190,9 @@ if __name__=="__main__":
 
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
-"""
+    test_loader = get_dataloader(test_dataset, BATCH_SIZE)
+
     writer = SummaryWriter()
-    run_nn(writer, train_loader)
+    run_nn(writer, train_loader, test_loader)
     writer.flush()
     writer.close()
-    """
