@@ -5,17 +5,18 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-import matplotlib.pylot as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import sklearn
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 10
 EPOCHS = 50
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.0001
 MOMENTUM = 0.9
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -49,10 +50,20 @@ def read_data(filename):
     """
     filepath = os.path.join(DIRNAME, filename)
     df = pd.read_csv(filepath)
+    print(df.columns)
+    df = df[df.ERROR < 1000000.0] # temporary? ignores all rows with high errors to avoid
+                                # exploding loss values...
 
     X = df.iloc[:, -4:-1]
     y = df.iloc[:, -1]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    X_train, y_train = np.array(X_train), np.array(y_train)
+    X_test, y_test = np.array(X_test), np.array(y_test)
 
     X_train, X_test, y_train, y_test = X_train.astype(float), X_test.astype(float), \
                                         y_train.astype(float), y_test.astype(float)
@@ -86,11 +97,12 @@ def run_nn(writer, loader):
             torch.nn.LeakyReLU(),
             torch.nn.Linear(50, 1),
             #torch.nn.ReLU() # clip off at 0?
-        ).to(device)
+        )#.to(device)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
     optimizer = torch.optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM)
 
+    print("============== BEGIN TRAINING =================")
     # train the neural net
     for epoch in range(EPOCHS):
         for step, data in enumerate(loader):
@@ -100,6 +112,7 @@ def run_nn(writer, loader):
             optimizer.zero_grad()   # zero the optim gradients
 
             prediction = net(X_batch)
+            y_batch = y_batch.view(-1, 1)
             loss = criterion(prediction, y_batch)
             loss.backward()         # backprop
             optimizer.step()        # apply gradients
@@ -109,15 +122,19 @@ def run_nn(writer, loader):
             print_stats(epoch + 1, step + 1, loss)
 
 if __name__=="__main__":
-    X_train, X_test, y_train, y_test = read_data("vis.csv")
+    X_train, X_test, y_train, y_test = read_data("vis00.csv")
+
+    print("X TRAINING")
+    print(X_train)
+    print("Y TRAINING")
+    print(y_train)
+
+
     train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
 
-    print("============== BEGIN TRAINING =================")
+
     writer = SummaryWriter()
     run_nn(writer, train_loader)
     writer.flush()
     writer.close()
-
-
-
