@@ -1,5 +1,5 @@
 """
-Generates fake continuous visibility data for
+Generates fake continuous and discrete visibility data for
 debugging purposes.
 
 Randomly chooses (x, y, 0) values and assigns
@@ -49,7 +49,7 @@ def generate_discrete(n, boundary_dist=45):
     return data
 
 def write_csv(data, filename):
-    with open(filename, mode='w') as datafile:
+    with open(filename, mode='w', newline='') as datafile:
         vis_writer = csv.writer(datafile, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
         vis_writer.writerow(["X", "Y", "Z", "ERROR"])
@@ -58,8 +58,8 @@ def write_csv(data, filename):
 
 
 if __name__ == "__main__":
-    #data = generate_continuous(50)
-    data = generate_discrete(50)
-    #print(data)
-    #write_csv(data, "fakecont.csv")
-    write_csv(data, "fakedis.csv")
+    data = generate_continuous(50)
+    write_csv(data, "vis_data/fakecont.csv")
+
+    #data = generate_discrete(50)
+    #write_csv(data, "vis_data/fakedis.csv")

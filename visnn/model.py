@@ -64,28 +64,8 @@ class VisNet(torch.nn.Module):
             x = self.relu(self.linears[i](x))
         return x
 
-def debug():
-    pass
-
-def read_data(filename):
-    """
-    Reads the visibility data (in csv format) from the filename
-    inside vis_data folder
-
-    Returns a pandas dataframe split into train (70) and test (30)
-
-    normalize inputs/outputs? or no?
-
-    """
-    filepath = os.path.join(DIRNAME, filename)
-    df = pd.read_csv(filepath)
-    #print(df.columns)
-    df = df[df.ERROR < 1000000.0] # temporary? ignores all rows with high errors to avoid
-                                # exploding loss values...
-
-    X = df.iloc[:, -4:-1]
-    y = df.iloc[:, -1]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+def split_data(X, y, test_fraction):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_fraction)
 
     """
     xscaler = MinMaxScaler(feature_range=(-1, 1))
@@ -109,6 +89,54 @@ def read_data(filename):
                                         y_train.astype(float), y_test.astype(float)
 
     return X_train, X_test, y_train, y_test
+
+def debug(continuous=True):
+    """
+    continuous: boolean
+        (true if continuous fake data, false if discrete fake data)
+    """
+    if (continuous):
+        filename = "fakecont.csv"
+    else:
+        filename = "fakedis.csv"
+
+    X_train, X_test, y_train, y_test = prepare_data(filename)
+
+    print("X TRAINING")
+    print(X_train)
+    print("Y TRAINING")
+    print(y_train)
+
+    train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
+    train_loader = get_dataloader(train_dataset, BATCH_SIZE)
+    test_loader = get_dataloader(test_dataset, BATCH_SIZE)
+
+    writer = SummaryWriter()
+    run_nn(writer, train_loader, test_loader)
+    writer.flush()
+    writer.close()
+
+def prepare_data(filename):
+    """
+    Reads the visibility data (in csv format) from the filename
+    inside vis_data folder
+
+    Returns a pandas dataframe split into train (70) and test (30)
+
+    normalize inputs/outputs? or no?
+
+    """
+    filepath = os.path.join(DIRNAME, filename)
+    df = pd.read_csv(filepath)
+    #print(df.columns)
+    df = df[df.ERROR < 1000000.0] # temporary? ignores all rows with high errors to avoid
+                                # exploding loss values...
+
+    X = df.iloc[:, -4:-1]
+    y = df.iloc[:, -1]
+
+    return split_data(X, y, 0.3)
+
 
 def get_datasets(X_train, X_test, y_train, y_test):
     train_dataset = VisDataset(torch.from_numpy(X_train).float(),
@@ -178,8 +206,8 @@ def run_nn(writer, trainloader, testloader):
         writer.add_scalar("Loss/validation", avg_valloss, epoch)
         print("EPOCH: {:2d}, VAL LOSS: {:.4f}".format(epoch, avg_valloss))
 
-if __name__ == "__main__":
-    X_train, X_test, y_train, y_test = read_data("vis00.csv")
+def train(filename):
+    X_train, X_test, y_train, y_test = prepare_data(filename)
 
     print("X TRAINING")
     print(X_train)
@@ -194,3 +222,10 @@ if __name__ == "__main__":
     run_nn(writer, train_loader, test_loader)
     writer.flush()
     writer.close()
+
+
+if __name__ == "__main__":
+    #train("vis00.csv")
+    debug()
+    pass
+
