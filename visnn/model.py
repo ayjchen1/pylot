@@ -178,8 +178,6 @@ def run_nn(writer, trainloader, testloader):
         writer.add_scalar("Loss/validation", avg_valloss, epoch)
         print("EPOCH: {:2d}, VAL LOSS: {:.4f}".format(epoch, avg_valloss))
 
-
-
 if __name__ == "__main__":
     X_train, X_test, y_train, y_test = read_data("vis00.csv")
 
