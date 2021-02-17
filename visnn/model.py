@@ -14,12 +14,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("USING DEVICE: ", device)
+#print("USING DEVICE: ", device)
 
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 5
 EPOCHS = 10000
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.005
 MOMENTUM = 0.9
 
 NLAYERS = 3
@@ -58,30 +58,34 @@ class VisNet(torch.nn.Module):
 
         self.relu = torch.nn.LeakyReLU()
 
-        # linear(3, 30), relu, linear(30, 15), relu, linear(15, 1), relu
+        # linear(3, 30), relu, linear(30, 15), relu, linear(15, 1)
 
     def forward(self, x):
-        for i in range(NLAYERS):
+        for i in range(NLAYERS - 1):
             x = self.relu(self.linears[i](x))
+
+        x = self.linears[NLAYERS - 1](x) # no relu on last layer
+        # add last layer (sigmoid): x -> 0 - 1
         return x
 
-def split_data(X, y, test_fraction):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_fraction)
-
-    """
+def normalize_data(X_train, X_test, y_train, y_test):
     xscaler = MinMaxScaler(feature_range=(-1, 1))
     X_train = xscaler.fit_transform(X_train)
     X_test = xscaler.transform(X_test)
-    """
 
     """
-    clip y values above a value
-
     yscaler = MinMaxScaler()
     #print(y_train.values.reshape(-1, 1))
     y_train = yscaler.fit_transform(y_train.values.reshape(-1, 1))
     y_test = yscaler.transform(y_test.values.reshape(-1, 1))
     """
+
+    return X_train, X_test, y_train, y_test
+
+def split_data(X, y, test_fraction):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_fraction)
+
+    X_train, X_test, y_train, y_test = normalize_data(X_train, X_test, y_train, y_test)
 
     X_train, y_train = np.array(X_train), np.array(y_train)
     X_test, y_test = np.array(X_test), np.array(y_test)
@@ -130,8 +134,7 @@ def prepare_data(filename):
     filepath = os.path.join(DIRNAME, filename)
     df = pd.read_csv(filepath)
     #print(df.columns)
-    df = df[df.ERROR < 1000000.0] # temporary? ignores all rows with high errors to avoid
-                                # exploding loss values...
+    df = df[df.ERROR < 1000.0] # temporary? ignores all rows with high errors to avoid
 
     X = df.iloc[:, -4:-1]
     y = df.iloc[:, -1]

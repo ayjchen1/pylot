@@ -3,3 +3,9 @@
 
 2. binary fake data (0.001 or 1000)
     MSELoss
+================================================
+
+transform error into 0-1 error
+get rid of the relu (sigmoid?)
+return x^2 instead of x
+test fake data (above 100)
