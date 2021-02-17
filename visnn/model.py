@@ -13,6 +13,8 @@ import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 5
 EPOCHS = 10000
@@ -21,8 +23,6 @@ MOMENTUM = 0.9
 
 NLAYERS = 3
 LAYERDIMS = [3, 30, 15, 1]
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class VisDataset(Dataset):
     """
@@ -154,7 +154,7 @@ def get_dataloader(dataset, batch_size):
 
 def run_nn(writer, trainloader, testloader):
     # define neural net architecture
-    net = VisNet()
+    net = VisNet().to(device)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
     optimizer = torch.optim.Adam(net.parameters(), lr=LEARNING_RATE)
@@ -169,6 +169,8 @@ def run_nn(writer, trainloader, testloader):
         for step, data in enumerate(trainloader):
             # find X, y
             X_batch, y_batch = data
+            X_batch.to(device)
+            y_batch.to(device)
             y_batch = torch.clamp(y_batch, 0, 100)
 
             optimizer.zero_grad()   # zero the optim gradients
@@ -193,6 +195,8 @@ def run_nn(writer, trainloader, testloader):
         for step, data in enumerate(testloader):
             # find X, y
             X_batch, y_batch = data
+            X_batch.to(device)
+            y_batch.to(device)
             y_batch = torch.clamp(y_batch, 0, 100)
 
             prediction = net(X_batch)
@@ -226,6 +230,7 @@ def train(filename):
 
 if __name__ == "__main__":
     #train("vis00.csv")
-    debug()
+    #debug(True)
+    debug(False) # discrete
     pass
 
