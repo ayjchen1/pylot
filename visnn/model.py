@@ -14,16 +14,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = "cpu"
 #print("USING DEVICE: ", device)
 
 DIRNAME = os.path.abspath(__file__ + "/../vis_data/")
 BATCH_SIZE = 5
 EPOCHS = 10000
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.0001
 MOMENTUM = 0.9
 
 NLAYERS = 3
-LAYERDIMS = [3, 30, 15, 1]
+LAYERDIMS = [3, 100, 50, 1]
 
 class VisDataset(Dataset):
     """
@@ -66,6 +67,7 @@ class VisNet(torch.nn.Module):
 
         x = self.linears[NLAYERS - 1](x) # no relu on last layer
         # add last layer (sigmoid): x -> 0 - 1
+        #x = torch.sigmoid(x)
         return x
 
 def normalize_data(X_train, X_test, y_train, y_test):
@@ -73,19 +75,12 @@ def normalize_data(X_train, X_test, y_train, y_test):
     X_train = xscaler.fit_transform(X_train)
     X_test = xscaler.transform(X_test)
 
-    """
-    yscaler = MinMaxScaler()
-    #print(y_train.values.reshape(-1, 1))
-    y_train = yscaler.fit_transform(y_train.values.reshape(-1, 1))
-    y_test = yscaler.transform(y_test.values.reshape(-1, 1))
-    """
-
     return X_train, X_test, y_train, y_test
 
 def split_data(X, y, test_fraction):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_fraction)
 
-    X_train, X_test, y_train, y_test = normalize_data(X_train, X_test, y_train, y_test)
+    #X_train, X_test, y_train, y_test = normalize_data(X_train, X_test, y_train, y_test)
 
     X_train, y_train = np.array(X_train), np.array(y_train)
     X_test, y_test = np.array(X_test), np.array(y_test)
@@ -95,31 +90,25 @@ def split_data(X, y, test_fraction):
 
     return X_train, X_test, y_train, y_test
 
-def debug(continuous=True):
-    """
-    continuous: boolean
-        (true if continuous fake data, false if discrete fake data)
-    """
-    if (continuous):
-        filename = "fakecont.csv"
-    else:
-        filename = "fakedis.csv"
+def process_df(df):
+    THRESHOLD = 1000
+    def squash_01(row):
+        """
+        Squeezes a row's vis error value into 0.001 (close to zero) or 1 (far away)
+        """
+        if (row['ERROR'] > THRESHOLD):
+            return 1
+        else:
+            return 0
 
-    X_train, X_test, y_train, y_test = prepare_data(filename)
+    #df['ERROR'] = df.apply(squash_01, axis=1)
 
-    print("X TRAINING")
-    print(X_train)
-    print("Y TRAINING")
-    print(y_train)
+    df = df[df.ERROR < 1000.0] # temporary? ignores all rows with high errors to avoid
+    df = df[df.CAMERA == 'FRONT-eval']
+    df.reset_index(drop=True)
+    # df = df[df.CAMERA == 'BACK-eval']
 
-    train_dataset, test_dataset = get_datasets(X_train, X_test, y_train, y_test)
-    train_loader = get_dataloader(train_dataset, BATCH_SIZE)
-    test_loader = get_dataloader(test_dataset, BATCH_SIZE)
-
-    writer = SummaryWriter()
-    run_nn(writer, train_loader, test_loader)
-    writer.flush()
-    writer.close()
+    return df
 
 def prepare_data(filename):
     """
@@ -133,14 +122,13 @@ def prepare_data(filename):
     """
     filepath = os.path.join(DIRNAME, filename)
     df = pd.read_csv(filepath)
-    #print(df.columns)
-    df = df[df.ERROR < 1000.0] # temporary? ignores all rows with high errors to avoid
+    df = process_df(df)
 
-    X = df.iloc[:, -4:-1]
-    y = df.iloc[:, -1]
+    X = df.iloc[:1000, -4:-1]
+    y = df.iloc[:1000, -1]
+    print(X)
 
     return split_data(X, y, 0.3)
-
 
 def get_datasets(X_train, X_test, y_train, y_test):
     train_dataset = VisDataset(torch.from_numpy(X_train).float(),
@@ -159,8 +147,10 @@ def get_dataloader(dataset, batch_size):
 def run_nn(writer, trainloader, testloader):
     # define neural net architecture
     net = VisNet().to(device)
+    print(net)
 
     criterion = torch.nn.MSELoss() # (y - yhat)^2
+    #criterion = torch.nn.BCELoss() # binary loss
     optimizer = torch.optim.Adam(net.parameters(), lr=LEARNING_RATE)
 
     print("============== BEGIN TRAINING =================")
@@ -191,7 +181,6 @@ def run_nn(writer, trainloader, testloader):
 
         avg_trainloss = trainloss / len(trainloader)
         writer.add_scalar("Loss/train", avg_trainloss, epoch)
-        print("EPOCH: {:2d}, TRAIN LOSS: {:.4f}".format(epoch, avg_trainloss))
 
         ##################################################################
 
@@ -212,9 +201,10 @@ def run_nn(writer, trainloader, testloader):
 
         avg_valloss = valloss / len(testloader)
         writer.add_scalar("Loss/validation", avg_valloss, epoch)
-        print("EPOCH: {:2d}, VAL LOSS: {:.4f}".format(epoch, avg_valloss))
 
-def train(filename):
+        print("EPOCH: {:2d}, TRAIN LOSS: {:.4f}, VAL LOSS: {:.4f}".format(epoch, avg_trainloss, avg_valloss))
+
+def train(filename, log_msg=None):
     X_train, X_test, y_train, y_test = prepare_data(filename)
 
     print("X TRAINING")
@@ -226,14 +216,32 @@ def train(filename):
     train_loader = get_dataloader(train_dataset, BATCH_SIZE)
     test_loader = get_dataloader(test_dataset, BATCH_SIZE)
 
-    writer = SummaryWriter()
+    if (log_msg is not None):
+        logdir = "runs/" + log_msg
+        writer = SummaryWriter(log_dir=logdir)
+    else:
+        writer = SummaryWriter()
+
     run_nn(writer, train_loader, test_loader)
     writer.flush()
     writer.close()
+    
+
+def debug(continuous=True, log_msg=None):
+    """
+    continuous: boolean
+        (true if continuous fake data, false if discrete fake data)
+    """
+    if (continuous):
+        filename = "fakecont.csv"
+    else:
+        filename = "fakedis.csv"
+
+    train(filename, log_msg)
 
 if __name__ == "__main__":
-    train("vis00.csv")
+    train("vis00.csv", "moreneurons2")
     #debug(True) # continuous
-    #debug(False) # discrete
+    #debug(False, "FAKEBCE2") # discrete
     pass
 
