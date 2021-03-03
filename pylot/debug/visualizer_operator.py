@@ -34,10 +34,19 @@ class VisualizerOperator(erdos.Operator):
     error stream visuals only -> eventually, merge with visualizer_operator_old.py
     to include all streams
     """
+    """
     def __init__(self, pose_stream, front_camera_stream, back_camera_stream, bird_camera_stream, tl_camera_stream,
                  prediction_camera_stream, depth_camera_stream,
                  point_cloud_stream, segmentation_stream, imu_stream,
                  obstacles_stream, front_obstacles_error, back_obstacles_error, traffic_lights_stream,
+                 tracked_obstacles_stream, lane_detection_stream,
+                 prediction_stream, waypoints_stream, control_stream,
+                 display_control_stream, pygame_display, flags):
+    """
+    def __init__(self, pose_stream, front_camera_stream, bird_camera_stream, tl_camera_stream,
+                 prediction_camera_stream, depth_camera_stream,
+                 point_cloud_stream, segmentation_stream, imu_stream,
+                 obstacles_stream, front_obstacles_error, traffic_lights_stream,
                  tracked_obstacles_stream, lane_detection_stream,
                  prediction_stream, waypoints_stream, control_stream,
                  display_control_stream, pygame_display, flags):
