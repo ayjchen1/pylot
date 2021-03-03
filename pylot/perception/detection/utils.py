@@ -484,7 +484,10 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
         for j in range(len(ground_obstacles)):
             det_bb = det_obstacles[i]._bounding_box_2D
             ground_bb = ground_obstacles[j]._bounding_box_2D
-            iou = det_bb.calculate_iou(ground_bb)
+            if (ground_bb):
+                iou = det_bb.calculate_iou(ground_bb)
+            else:
+                iou = 0.0
             if (iou > iou_threshold):
                 ious.append((i, j, iou))
     
