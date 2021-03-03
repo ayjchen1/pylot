@@ -57,7 +57,8 @@ class VisualizerOperator(erdos.Operator):
             partial(self.save, msg_type="Pose", queue=self._pose_msgs))
         visualize_streams.append(pose_stream)
 
-        rgb_camera_streams = [front_camera_stream, back_camera_stream]
+        #rgb_camera_streams = [front_camera_stream, back_camera_stream]
+        rgb_camera_streams = [front_camera_stream]
         self._bgr_msg_queues = []
         for i in range(len(rgb_camera_streams)):
             self._bgr_msg_queues.append(deque())
@@ -68,7 +69,8 @@ class VisualizerOperator(erdos.Operator):
                 partial(self.save, msg_type=msg_name, queue=self._bgr_msg_queues[i]))
             visualize_streams.append(rgb_camera_stream)
 
-        obstacles_error_streams = [front_obstacles_error, back_obstacles_error]
+        #obstacles_error_streams = [front_obstacles_error, back_obstacles_error]
+        obstacles_error_streams = [front_obstacles_error]
         self._obstacle_error_msg_queues = []
         for i in range(len(obstacles_error_streams)):
             self._obstacle_error_msg_queues.append(deque())
@@ -125,11 +127,10 @@ class VisualizerOperator(erdos.Operator):
         self._flags = flags
 
     @staticmethod
-    def connect(pose_stream, front_camera_stream, back_camera_stream, bird_camera_stream, tl_camera_stream,
+    def connect(pose_stream, front_camera_stream, bird_camera_stream, tl_camera_stream,
                 prediction_camera_stream, depth_stream, point_cloud_stream,
                 segmentation_stream, imu_stream, obstacles_stream,
-                front_obstacles_error, back_obstacles_error, 
-                traffic_lights_stream, tracked_obstacles_stream,
+                front_obstacles_error, traffic_lights_stream, tracked_obstacles_stream,
                 lane_detection_stream, prediction_stream, waypoints_stream,
                 control_stream, display_control_stream):
         return []
