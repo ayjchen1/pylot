@@ -143,15 +143,25 @@ class Obstacle(object):
         if not self._bounding_box_2D:
             raise ValueError(
                 'Obstacle {} does not have 2D bounding box'.format(self.id))
+
         if text is None:
             text = '{}, {:.1f}'.format(self.label, self.confidence)
-            if self.id != -1:
-                text += ', id:{}'.format(self.id)
+
+            #if self.id != -1:
+                #text += ', id:{}'.format(self.id)
+
             if ego_transform is not None and self.transform is not None:
-                text += ', {:.1f}m'.format(
-                    ego_transform.location.distance(self.transform.location))
+                ego_loc = ego_transform.location.as_numpy_array()
+                self_loc = self.transform.location.as_numpy_array()
+                relative_dist = self_loc - ego_loc
+
+                text += 'x:{:.2f}m, y:{:.2f}m'.format(relative_dist[0], relative_dist[1])
+
+                #text += ', {:.1f}m'.format(
+                    #ego_transform.location.distance(self.transform.location))
+
             text += ", error:{:.3f}".format(self.vis_error)
-            
+
         if self.label in bbox_color_map:
             color = bbox_color_map[self.label]
         else:

@@ -46,7 +46,7 @@ def add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
             pose_stream_for_control, waypoints_stream_for_control)
 
 def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms):
-    """     
+    """
     Adds 1+ cameras to the vehicle
     """
     rgb_camera_streams = []
@@ -68,7 +68,7 @@ def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transf
         if pylot.flags.must_add_depth_camera_sensor():
             (depth_camera_stream, notify_depth_stream,
              depth_camera_setup) = pylot.operator_creator.add_depth_camera(
-                 transform, vehicle_id_stream, release_sensor_stream)     
+                 transform, vehicle_id_stream, release_sensor_stream)
         else:
             depth_camera_stream = None
         depth_camera_streams.append(depth_camera_stream)
@@ -151,7 +151,7 @@ def driver():
             add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms)
 
     # add a birds-eye camera
-    
+
     top_down_transform = pylot.utils.get_top_down_transform(
                 pylot.utils.Transform(pylot.utils.Location(),
                                       pylot.utils.Rotation()),
@@ -159,7 +159,7 @@ def driver():
     (bird_camera_stream, notify_bird_stream, bird_setup) = \
         pylot.operator_creator.add_bird_camera(top_down_transform, vehicle_id_stream, release_sensor_stream)
     notify_streams.append(notify_bird_stream)
-        
+
     imu_stream = None
     if pylot.flags.must_add_imu_sensor():
         (imu_stream, _) = pylot.operator_creator.add_imu(
@@ -177,7 +177,7 @@ def driver():
 # ----------------------------------------------------------------------------------
 
     #IGNORE
-    if FLAGS.localization: 
+    if FLAGS.localization:
         pose_stream = pylot.operator_creator.add_localization(
             imu_stream, gnss_stream, pose_stream)
 
@@ -193,7 +193,7 @@ def driver():
         ground_segmented_stream = segmented_camera_streams[i]
         point_cloud_stream = point_cloud_streams[i]
         lidar_setup = lidar_setups[i]
-        depth_stream = depth_streams[i]        
+        depth_stream = depth_streams[i]
         eval_name = camera_names[i] + "-eval"
 
         obstacles_stream, perfect_obstacles_stream, obstacles_error_stream = \
@@ -202,9 +202,9 @@ def driver():
                 depth_stream, depth_camera_stream, ground_segmented_stream,
                 ground_obstacles_stream, ground_speed_limit_signs_stream,
                 ground_stop_signs_stream, time_to_decision_loop_stream, eval_name)
-        
+
         print("CREATED COMPONENTS: ", transform.location)
-    
+
         obstacles_streams.append(obstacles_stream)
         perfect_obstacles_streams.append(perfect_obstacles_stream)
         obstacles_error_streams.append(obstacles_error_stream)

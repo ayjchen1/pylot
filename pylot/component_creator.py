@@ -75,7 +75,7 @@ def add_obstacle_detection(center_camera_stream,
             obstacles_streams = pylot.operator_creator.add_obstacle_detection(
                 center_camera_stream, time_to_decision_stream)
             obstacles_stream_wo_depth = obstacles_streams[0]
-       
+
         obstacles_stream = \
                 pylot.operator_creator.add_obstacle_location_finder(
                     obstacles_stream_wo_depth, depth_stream, pose_stream,

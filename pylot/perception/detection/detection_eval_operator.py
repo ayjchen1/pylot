@@ -99,10 +99,10 @@ class DetectionEvalOperator(erdos.Operator):
                         ground_ob = errs[i][0]
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
-                        
+
                         if (det_ob is not None):
                             det_ob.vis_error = err_val
-                        
+
                         ego_loc = ego_transform.location.as_numpy_array()
                         ob_actual_loc = ground_ob.transform.location.as_numpy_array()
                         relative_dist = ob_actual_loc - ego_loc
@@ -110,12 +110,12 @@ class DetectionEvalOperator(erdos.Operator):
                         # (time, time, object label, object id, x_obj - x_ego, error)
                         self._csv_logger.info('{},{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
                             time_epoch_ms(), sim_time, self.config.name, ground_ob.id, ground_ob.label,
-                            relative_dist[0], relative_dist[1], relative_dist[2], 
+                            relative_dist[0], relative_dist[1], relative_dist[2],
                             err_val))
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))
-                
+
                 obstacles_error_stream.send(ObstaclesMessage(timestamp, obstacles))
                 obstacles_error_stream.send(erdos.WatermarkMessage(timestamp))
             else:
