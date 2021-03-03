@@ -47,7 +47,7 @@ def add_evaluation_operators(vehicle_id_stream, pose_stream, imu_stream,
 
 def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms):
     """     
-    Adds a front camera and a back camera to the vehicle
+    Adds 1+ cameras to the vehicle
     """
     rgb_camera_streams = []
     rgb_camera_setups = []
@@ -109,7 +109,7 @@ def add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transf
 
 def driver():
     csv_logger = erdos.utils.setup_csv_logging("head-csv", FLAGS.csv_log_file_name)
-    csv_logger.info('TIME, SIMTIME, CAMERA, GROUNDID, LABEL, X, Y, Z, ERROR')
+    csv_logger.info('TIME,SIMTIME,CAMERA,GROUNDID,LABEL,X,Y,Z,ERROR')
 
     streams_to_send_top_on = []
     control_loop_stream = erdos.LoopStream()
@@ -143,8 +143,10 @@ def driver():
     front_transform = pylot.utils.Transform(FRONT_CAMERA_LOCATION, pylot.utils.Rotation(pitch=-5))
     back_transform = pylot.utils.Transform(BACK_CAMERA_LOCATION, pylot.utils.Rotation(pitch=0, yaw=180)) # CORRECT ROTATION?
 
-    camera_names = ["FRONT", "BACK"]
-    transforms = [front_transform, back_transform]
+    #camera_names = ["FRONT", "BACK"]
+    #transforms = [front_transform, back_transform]
+    camera_names = ["FRONT"]
+    transforms = [front_transform]
     rgb_camera_streams, rgb_camera_setups, depth_camera_streams, segmented_camera_streams, point_cloud_streams, lidar_setups, depth_streams = \
             add_cameras(vehicle_id_stream, release_sensor_stream, notify_streams, transforms)
 
