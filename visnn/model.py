@@ -225,7 +225,7 @@ def train(filename, log_msg=None):
     run_nn(writer, train_loader, test_loader)
     writer.flush()
     writer.close()
-    
+
 
 def debug(continuous=True, log_msg=None):
     """
