@@ -76,11 +76,13 @@ class CameraFrame(object):
                                      detected_obstacles,
                                      transform=None,
                                      bbox_color_map=pylot.perception.detection.
-                                     utils.PYLOT_BBOX_COLOR_MAP):
+                                     utils.PYLOT_BBOX_COLOR_MAP, 
+                                     bbox_color=None):
         pylot.utils.add_timestamp(self.frame, timestamp)
         for obstacle in detected_obstacles:
             obstacle.draw_on_frame(self,
                                    bbox_color_map,
+                                   bbox_color,
                                    ego_transform=transform)
 
     def draw_box(self,

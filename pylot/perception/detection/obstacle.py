@@ -137,6 +137,7 @@ class Obstacle(object):
     def draw_on_frame(self,
                       frame,
                       bbox_color_map,
+                      bbox_color,
                       ego_transform=None,
                       text=None):
         """Annotate the image with the bounding box of the obstacle."""
@@ -163,10 +164,13 @@ class Obstacle(object):
 
             text += ", error:{:.3f}".format(self.vis_error)
 
-        if self.label in bbox_color_map:
-            color = bbox_color_map[self.label]
+        if (bbox_color is not None):
+            color = bbox_color
         else:
-            color = [255, 255, 255]
+            if self.label in bbox_color_map:
+                color = bbox_color_map[self.label]
+            else:
+                color = [255, 255, 255]
         # Show bounding box.
         frame.draw_box(self._bounding_box_2D.get_min_point(),
                        self._bounding_box_2D.get_max_point(), color)

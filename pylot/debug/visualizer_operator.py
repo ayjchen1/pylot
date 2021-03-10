@@ -129,10 +129,6 @@ class VisualizerOperator(erdos.Operator):
                 display_name = "ObstacleError" + str(i)
                 self.display_array.append(display_name)
                 self.window_titles.append("Detected obstacles")
-
-                display_name = "PerfectObstacle" + str(i)
-                self.display_array.append(display_name)
-                self.window_titles.append("Perfect obstacles")
             
             self.display_array.append("BirdEye")
             self.window_titles.append("Bird's Eye View")
@@ -264,18 +260,15 @@ class VisualizerOperator(erdos.Operator):
             perfect_obstacles_msg = perfect_obstacles_msgs[i]
 
             sensor_name = "ObstacleError" + str(i)
-            if sensor_to_display == sensor_name and bgr_msg and obstacle_error_msg:
+            if sensor_to_display == sensor_name and bgr_msg and obstacle_error_msg and perfect_obstacles_msg:
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                        obstacle_error_msg.obstacles,
-                                                       ego_transform)
-                bgr_msg.frame.visualize(self.display, timestamp=timestamp)
-                break
-            
-            sensor_name = "PerfectObstacle" + str(i)
-            if sensor_to_display == sensor_name and bgr_msg and perfect_obstacles_msg:
+                                                       ego_transform,
+                                                       bbox_color=[255, 0, 0]) # BLUE
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
-                                                       perfect_obstacles_msg.obstacles,
-                                                       ego_transform)
+                                                        perfect_obstacles_msg.obstacles,
+                                                        ego_transform,
+                                                        bbox_color=[0, 0, 255]) # RED
                 bgr_msg.frame.visualize(self.display, timestamp=timestamp)
                 break
         
