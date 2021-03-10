@@ -46,7 +46,8 @@ class VisualizerOperator(erdos.Operator):
     def __init__(self, pose_stream, front_camera_stream, bird_camera_stream, tl_camera_stream,
                  prediction_camera_stream, depth_camera_stream,
                  point_cloud_stream, segmentation_stream, imu_stream,
-                 obstacles_stream, front_obstacles_error, traffic_lights_stream,
+                 obstacles_stream, front_obstacles_error, front_perfect_obstacles,
+                 traffic_lights_stream,
                  tracked_obstacles_stream, lane_detection_stream,
                  prediction_stream, waypoints_stream, control_stream,
                  display_control_stream, pygame_display, flags):
@@ -80,6 +81,18 @@ class VisualizerOperator(erdos.Operator):
             obstacles_error_stream.add_callback(
                 partial(self.save, msg_type=msg_name, queue=self._obstacle_error_msg_queues[i]))
             visualize_streams.append(obstacles_error_stream)
+
+        #perfect_obstacles_streams = [front_perfect_obstacles, back_perfect_obstacles]
+        perfect_obstacles_streams = [front_perfect_obstacles]
+        self._perfect_obstacles_msg_queues = []
+        for i in range(len(perfect_obstacles_streams)):
+            self._perfect_obstacles_msg_queues.append(deque())
+
+            perfect_obstacles_stream = perfect_obstacles_streams[i]
+            msg_name = "PerfectObstacle" + str(i)
+            perfect_obstacles_stream.add_callback(
+                partial(self.save, msg_type=msg_name, queue=self._perfect_obstacles_msg_queues[i]))
+            visualize_streams.append(perfect_obstacles_stream)
 
         self._bird_msgs = deque()
         bird_camera_stream.add_callback(
@@ -116,6 +129,10 @@ class VisualizerOperator(erdos.Operator):
                 display_name = "ObstacleError" + str(i)
                 self.display_array.append(display_name)
                 self.window_titles.append("Detected obstacles")
+
+                display_name = "PerfectObstacle" + str(i)
+                self.display_array.append(display_name)
+                self.window_titles.append("Perfect obstacles")
             
             self.display_array.append("BirdEye")
             self.window_titles.append("Bird's Eye View")
@@ -130,7 +147,8 @@ class VisualizerOperator(erdos.Operator):
     def connect(pose_stream, front_camera_stream, bird_camera_stream, tl_camera_stream,
                 prediction_camera_stream, depth_stream, point_cloud_stream,
                 segmentation_stream, imu_stream, obstacles_stream,
-                front_obstacles_error, traffic_lights_stream, tracked_obstacles_stream,
+                front_obstacles_error, front_perfect_obstacles,
+                traffic_lights_stream, tracked_obstacles_stream,
                 lane_detection_stream, prediction_stream, waypoints_stream,
                 control_stream, display_control_stream):
         return []
@@ -220,6 +238,12 @@ class VisualizerOperator(erdos.Operator):
             obstacle_error_msg = self.get_message(self._obstacle_error_msg_queues[i], timestamp, msg_name)
             obstacle_error_msgs.append(obstacle_error_msg)
 
+        perfect_obstacles_msgs = []
+        for i in range(len(self._perfect_obstacles_msg_queues)):
+            msg_name = "PerfectObstacle" + str(i)
+            perfect_obstacles_msg = self.get_message(self._perfect_obstacles_msg_queues[i], timestamp, msg_name)
+            perfect_obstacles_msgs.append(perfect_obstacles_msg)
+
         bird_msg = self.get_message(self._bird_msgs, timestamp, "BirdEye")
         
         control_msg = self.get_message(self._control_msgs, timestamp,
@@ -235,13 +259,22 @@ class VisualizerOperator(erdos.Operator):
 
         sensor_to_display = self.display_array[self.current_display]
         for i in range(len(bgr_msgs)):
-            sensor_name = "ObstacleError" + str(i)
             bgr_msg = bgr_msgs[i]
             obstacle_error_msg = obstacle_error_msgs[i]
+            perfect_obstacles_msg = perfect_obstacles_msgs[i]
 
+            sensor_name = "ObstacleError" + str(i)
             if sensor_to_display == sensor_name and bgr_msg and obstacle_error_msg:
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                        obstacle_error_msg.obstacles,
+                                                       ego_transform)
+                bgr_msg.frame.visualize(self.display, timestamp=timestamp)
+                break
+            
+            sensor_name = "PerfectObstacle" + str(i)
+            if sensor_to_display == sensor_name and bgr_msg and perfect_obstacles_msg:
+                bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
+                                                       perfect_obstacles_msg.obstacles,
                                                        ego_transform)
                 bgr_msg.frame.visualize(self.display, timestamp=timestamp)
                 break

@@ -145,7 +145,8 @@ class Obstacle(object):
                 'Obstacle {} does not have 2D bounding box'.format(self.id))
 
         if text is None:
-            text = '{}, {:.1f}'.format(self.label, self.confidence)
+            text = '{}'.format(self.label)
+            #text += ',{:.1f}'.format(self.confidence)
 
             #if self.id != -1:
                 #text += ', id:{}'.format(self.id)
@@ -155,7 +156,7 @@ class Obstacle(object):
                 self_loc = self.transform.location.as_numpy_array()
                 relative_dist = self_loc - ego_loc
 
-                text += 'x:{:.2f}m, y:{:.2f}m'.format(relative_dist[0], relative_dist[1])
+                text += ', x:{:.2f}m, y:{:.2f}m'.format(relative_dist[0], relative_dist[1])
 
                 #text += ', {:.1f}m'.format(
                     #ego_transform.location.distance(self.transform.location))

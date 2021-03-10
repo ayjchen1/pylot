@@ -824,6 +824,7 @@ def add_visualizer(pose_stream=None,
                    imu_stream=None,
                    obstacles_streams=None, # MULTIPLE
                    obstacles_error_streams=None, # MULTIPLE
+                   perfect_obstacles_streams=None, #MULTIPLE
                    traffic_lights_stream=None,
                    tracked_obstacles_stream=None,
                    lane_detection_stream=None,
@@ -845,6 +846,7 @@ def add_visualizer(pose_stream=None,
         camera_stream = camera_streams[i]
         obstacles_stream = obstacles_streams[i]
         obstacles_error_stream = obstacles_error_streams[i]
+        perfect_obstacles_stream = perfect_obstacles_streams[i]
         point_cloud_stream = point_cloud_streams[i]
         depth_stream = depth_streams[i]
 
@@ -873,6 +875,12 @@ def add_visualizer(pose_stream=None,
             obstacles_error_stream = erdos.IngestStream()
             obstacles_error_streams[i] = obstacles_error_stream
             streams_to_send_top_on.append(obstacles_error_stream)
+        
+        if perfect_obstacles_stream is None or not FLAGS.visualize_detected_obstacles:
+            print("ERROR WITH PERFECT OBSTACLES ERROR STREAM")
+            perfect_obstacles_stream = erdos.IngestStream()
+            perfect_obstacles_streams[i] = perfect_obstacles_stream
+            streams_to_send_top_on.append(perfect_obstacles_stream)
 
         # ingest
         if point_cloud_stream is None or not FLAGS.visualize_lidar:
@@ -939,7 +947,8 @@ def add_visualizer(pose_stream=None,
     erdos.connect(VisualizerOperator, op_config, [
         pose_stream, *camera_streams, bird_camera_stream, tl_camera_stream, prediction_camera_stream,
         depth_streams[0], point_cloud_streams[0], segmentation_stream, imu_stream,
-        obstacles_streams[0], *obstacles_error_streams, traffic_lights_stream, tracked_obstacles_stream,
+        obstacles_streams[0], *obstacles_error_streams, *perfect_obstacles_streams, 
+        traffic_lights_stream, tracked_obstacles_stream,
         lane_detection_stream, prediction_stream, waypoints_stream,
         control_stream, control_display_stream
     ], pygame_display, FLAGS)

@@ -220,7 +220,7 @@ class PerfectDetectorOperator(erdos.Operator):
                     self._flags.dynamic_obstacle_distance_threshold):
                 bbox = obstacle.populate_bounding_box_2D(
                     depth_frame, segmented_frame)
-                #if bbox:
-                #    det_obstacles.append(obstacle)
-                det_obstacles.append(obstacle)
+                if bbox:
+                    det_obstacles.append(obstacle)
+                #det_obstacles.append(obstacle)
         return det_obstacles
