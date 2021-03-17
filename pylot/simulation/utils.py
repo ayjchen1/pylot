@@ -12,6 +12,30 @@ from pylot.perception.detection.traffic_light import TrafficLight
 from pylot.perception.detection.utils import BoundingBox2D
 
 
+def check_simulator_version(simulator_version,
+                            required_major=0,
+                            required_minor=9,
+                            required_patch=1):
+    """Checks if the simulator meets the minimum version requirements."""
+    ver_strs = simulator_version.split('.')
+    if len(ver_strs) < 2 or len(ver_strs) > 3:
+        raise ValueError(
+            'CARLA version {} is not supported'.format(simulator_version))
+    major = int(ver_strs[0])
+    minor = int(ver_strs[1])
+    if major != required_major:
+        return major > required_major
+    else:
+        if minor != required_minor:
+            return minor > required_minor
+        else:
+            if len(ver_strs) == 3:
+                patch = int(ver_strs[2])
+                return patch >= required_patch
+            else:
+                return True
+
+
 def get_world(host: str = "localhost", port: int = 2000, timeout: int = 10):
     """Get a handle to the world running inside the simulation.
 
@@ -146,8 +170,9 @@ def spawn_actors(client, world, simulator_version: str,
     ego_vehicle = spawn_ego_vehicle(world, ego_spawn_point_index, auto_pilot)
     people = []
 
-    if not (simulator_version.startswith('0.8') or re.match(
-            '0\.9\.[0-5]', simulator_version) is not None):  # noqa: W605
+    if check_simulator_version(simulator_version,
+                               required_minor=9,
+                               required_patch=6):
         # People do not move in versions older than 0.9.6.
         (people, people_control_ids) = spawn_people(client, world, num_people,
                                                     logger)
@@ -446,7 +471,7 @@ def get_detected_speed_limits(speed_signs, depth_frame, segmented_frame):
             elif yaw_diff >= 360:
                 yaw_diff -= 360
             if best_dist < 5**2 and yaw_diff > 30 and yaw_diff < 150:
-                best_ts.bounding_box = bbox
+                best_ts.bounding_box_2D = bbox
                 result.append(best_ts)
         return result
 
@@ -532,7 +557,7 @@ def get_detected_traffic_stops(traffic_stops, depth_frame):
         bbox_2d = get_stop_markings_bbox(stop_sign.bounding_box_3d,
                                          depth_frame)
         if bbox_2d is not None:
-            stop_sign.bounding_box = bbox_2d
+            stop_sign.bounding_box_2D = bbox_2d
             det_stop_signs.append(stop_sign)
     return det_stop_signs
 

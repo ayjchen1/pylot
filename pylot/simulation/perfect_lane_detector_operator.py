@@ -45,6 +45,9 @@ class PerfectLaneDetectionOperator(erdos.Operator):
         detected_lane_stream = erdos.WriteStream()
         return [detected_lane_stream]
 
+    def destroy(self):
+        self._logger.warn('destroying {}'.format(self.config.name))
+
     def run(self):
         # Run method is invoked after all operators finished initializing.
         # Thus, we're sure the world is up-to-date here.
@@ -92,6 +95,8 @@ class PerfectLaneDetectionOperator(erdos.Operator):
             pose_msg: Contains the current location of the ego vehicle.
         """
         self._logger.debug('@{}: received watermark'.format(timestamp))
+        if timestamp.is_top:
+            return
         bgr_msg = self._bgr_msgs.popleft()
         pose_msg = self._pose_msgs.popleft()
         vehicle_location = pose_msg.data.transform.location
@@ -114,11 +119,11 @@ class PerfectLaneDetectionOperator(erdos.Operator):
                 if self._frame_cnt % self._flags.log_every_nth_message == 0:
                     instance_file_name = os.path.join(
                         self._flags.data_path,
-                        '{}-{}.png'.format("lane-",
+                        '{}-{}.png'.format("lane",
                                            bgr_msg.timestamp.coordinates[0]))
                     binary_file_name = os.path.join(
                         self._flags.data_path,
-                        '{}-{}.png'.format("binary_lane-",
+                        '{}-{}.png'.format("binary_lane",
                                            bgr_msg.timestamp.coordinates[0]))
                     instance_img = Image.fromarray(frame)
                     binary_img = Image.fromarray(binary_frame)
@@ -136,4 +141,3 @@ class PerfectLaneDetectionOperator(erdos.Operator):
             lanes = []
         output_msg = LanesMessage(pose_msg.timestamp, lanes)
         detected_lane_stream.send(output_msg)
-        detected_lane_stream.send(erdos.WatermarkMessage(pose_msg.timestamp))

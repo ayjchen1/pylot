@@ -1,24 +1,17 @@
 import logging
 import math
-import os
-import sys
 
 import cv2
+import numpy as np
+import tensorflow as tf
 
 import erdos
 
-import numpy as np
+from lanenet.lanenet_model import lanenet  # noqa: I100 E402
+from lanenet.lanenet_model import lanenet_postprocess  # noqa: I100 E402
 
 import pylot.utils
 from pylot.perception.detection.lane import Lane
-
-import tensorflow as tf
-
-sys.path.append("{}/dependencies/lanenet-lane-detection".format(
-    os.getenv("PYLOT_HOME")))
-
-from lanenet_model import lanenet  # noqa: I100 E402
-from lanenet_model import lanenet_postprocess  # noqa: I100 E402
 
 
 class LanenetDetectionOperator(erdos.Operator):
@@ -79,6 +72,9 @@ class LanenetDetectionOperator(erdos.Operator):
         """
         detected_lanes_stream = erdos.WriteStream()
         return [detected_lanes_stream]
+
+    def destroy(self):
+        self._logger.warn('destroying {}'.format(self.config.name))
 
     @erdos.profile_method()
     def on_camera_frame(self, msg, detected_lanes_stream):
@@ -155,7 +151,6 @@ class LanenetDetectionOperator(erdos.Operator):
             msg.timestamp, len(detected_lanes)))
         detected_lanes_stream.send(erdos.Message(msg.timestamp,
                                                  detected_lanes))
-        detected_lanes_stream.send(erdos.WatermarkMessage(msg.timestamp))
 
         # plt.figure('binary_image')
         # plt.imshow(binary_seg_image[0] * 255, cmap='gray')
