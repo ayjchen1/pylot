@@ -263,11 +263,11 @@ class VisualizerOperator(erdos.Operator):
             if sensor_to_display == sensor_name and bgr_msg and obstacle_error_msg and perfect_obstacles_msg:
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                        obstacle_error_msg.obstacles,
-                                                       ego_transform,
+                                                       transform=ego_transform,
                                                        bbox_color=[255, 0, 0]) # BLUE
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                         perfect_obstacles_msg.obstacles,
-                                                        ego_transform,
+                                                        transform=ego_transform,
                                                         bbox_color=[0, 0, 255]) # RED
                 bgr_msg.frame.visualize(self.display, timestamp=timestamp)
                 break
