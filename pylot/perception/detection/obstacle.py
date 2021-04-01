@@ -50,6 +50,7 @@ class Obstacle(object):
         self.id = id
         self.transform = transform
         self.detailed_label = detailed_label
+
         if label == 'vehicle':
             self.segmentation_class = 10
         elif label == 'person':
@@ -58,7 +59,7 @@ class Obstacle(object):
             self.segmentation_class = None
         self.vis_error = vis_error
         # Thresholds to be used for detection of the obstacle.
-        self.__segmentation_threshold = 0.20
+        self.__segmentation_threshold = 0.01
         self.__depth_threshold = 5
 
     @classmethod
@@ -95,13 +96,13 @@ class Obstacle(object):
                    detailed_label)
 
     def as_mot16_str(self, timestamp):
-        if not self.bounding_box_2D:
+        if not self._bounding_box_2D:
             raise ValueError(
                 'Obstacle {} does not have 2D bounding box'.format(self.id))
         log_line = "{},{},{},{},{},{},{},{},{},{}\n".format(
-            timestamp, self.id, self.bounding_box_2D.x_min,
-            self.bounding_box_2D.y_min, self.bounding_box_2D.get_width(),
-            self.bounding_box_2D.get_height(), 1.0, -1, -1, -1)
+            timestamp, self.id, self._bounding_box_2D.x_min,
+            self._bounding_box_2D.y_min, self._bounding_box_2D.get_width(),
+            self._bounding_box_2D.get_height(), 1.0, -1, -1, -1)
         return log_line
 
     def _distance(self, other_transform):
@@ -142,8 +143,9 @@ class Obstacle(object):
                       text=None):
         """Annotate the image with the bounding box of the obstacle."""
         if not self._bounding_box_2D:
-            raise ValueError(
-                'Obstacle {} does not have 2D bounding box'.format(self.id))
+            return
+        #    raise ValueError(
+        #        'Obstacle {} does not have 2D bounding box'.format(self.id))
 
         if text is None:
             text = '{}'.format(self.label)
@@ -157,7 +159,7 @@ class Obstacle(object):
                 self_loc = self.transform.location.as_numpy_array()
                 relative_dist = self_loc - ego_loc
 
-                text += ', x:{:.2f}m, y:{:.2f}m'.format(relative_dist[0], relative_dist[1])
+                #text += ', x:{:.2f}m, y:{:.2f}m'.format(relative_dist[0], relative_dist[1])
 
                 #text += ', {:.1f}m'.format(
                     #ego_transform.location.distance(self.transform.location))
@@ -172,16 +174,11 @@ class Obstacle(object):
             else:
                 color = [255, 255, 255]
         # Show bounding box.
-<<<<<<< HEAD
-        frame.draw_box(self._bounding_box_2D.get_min_point(),
-                       self._bounding_box_2D.get_max_point(), color)
-        frame.draw_text(self._bounding_box_2D.get_min_point(), text, color)
-=======
-        if self.bounding_box_2D:
+        if self._bounding_box_2D:
             # Draw the 2D bounding box if available.
-            frame.draw_box(self.bounding_box_2D.get_min_point(),
-                           self.bounding_box_2D.get_max_point(), color)
-            frame.draw_text(self.bounding_box_2D.get_min_point(), text, color)
+            frame.draw_box(self._bounding_box_2D.get_min_point(),
+                           self._bounding_box_2D.get_max_point(), color)
+            frame.draw_text(self._bounding_box_2D.get_min_point(), text, color)
         elif isinstance(self.bounding_box, BoundingBox3D):
             if self.bounding_box.corners is None:
                 raise ValueError(
@@ -190,10 +187,9 @@ class Obstacle(object):
                 None, frame.camera_setup.get_extrinsic_matrix(),
                 frame.camera_setup.get_intrinsic_matrix())
             frame.draw_3d_box(corners, color)
-        else:
-            raise ValueError('Obstacle {} does not have bounding box'.format(
-                self.id))
->>>>>>> upstream/master
+        #else:
+        #    raise ValueError('Obstacle {} does not have bounding box'.format(
+        #        self.id))
 
     def draw_trajectory_on_frame(self,
                                  trajectory,
@@ -327,6 +323,7 @@ class Obstacle(object):
         bbox_2d = get_bounding_box_in_camera_view(
             bb_coordinates, depth_frame.camera_setup.width,
             depth_frame.camera_setup.height)
+
         if not bbox_2d:
             return None
         # Crop the segmented and depth image to the given bounding box.

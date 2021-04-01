@@ -73,7 +73,7 @@ class DetectionEvalOperator(erdos.Operator):
 
         sim_time = timestamp.coordinates[0]
         while len(self._detector_start_end_times) > 0:
-            print("INSIDE EVAL WATERMARK", timestamp)
+            #print("INSIDE EVAL WATERMARK", timestamp)
             (end_time, start_time) = self._detector_start_end_times[0]
 
             if end_time <= game_time:
@@ -81,7 +81,16 @@ class DetectionEvalOperator(erdos.Operator):
 
                 ego_transform, ground_obstacles = self.__get_ground_obstacles_at(end_time)
 
+                go_labels = []
+                for go in ground_obstacles:
+                    go_labels.append(go.label)
+
                 obstacles = self.__get_obstacles_at(start_time)
+
+                do_labels = []
+                for do in obstacles:
+                    do_labels.append(do.label)
+                #print(timestamp, go_labels, do_labels)
 
                 if (len(obstacles) > 0 or len(ground_obstacles) > 0):
                     errs = pylot.perception.detection.utils.get_errors(
@@ -95,10 +104,16 @@ class DetectionEvalOperator(erdos.Operator):
 
                     self._logger.info('errors calculated')
 
+                    matchobs = []
                     for i in range(len(errs)):
                         ground_ob = errs[i][0]
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
+
+                        if det_ob:
+                            matchobs.append([ground_ob.label, det_ob.label])
+                        else:
+                            matchobs.append([ground_ob.label])
 
                         if (det_ob is not None):
                             det_ob.vis_error = err_val
@@ -112,6 +127,8 @@ class DetectionEvalOperator(erdos.Operator):
                             time_epoch_ms(), sim_time, self.config.name, ground_ob.id, ground_ob.label,
                             relative_dist[0], relative_dist[1], relative_dist[2],
                             err_val))
+
+                    print(timestamp, matchobs)
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))

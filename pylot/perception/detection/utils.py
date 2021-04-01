@@ -466,7 +466,6 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
     """ match the ground and detected obstacles together
     based on IoU values on bounding boxes
     """
-    
     matched = [] #[[ground1, det1], [ground2, det2], [ground3, det3], etc] all indexes
     extra_ground = [] # false negatives
     extra_det = [] # false positives
@@ -488,14 +487,16 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
                 iou = det_bb.calculate_iou(ground_bb)
             else:
                 iou = 0.0
-            if (iou > iou_threshold):
-                ious.append((i, j, iou))
+            #if (iou > iou_threshold):
+            #    ious.append((i, j, iou))
+            ious.append((i, j, iou))
     
     # If no IOUs were over the threshold, return all predictions as false
     # positives and all ground truths as false negatives.
     if len(ious) == 0:
         return [], range(len(ground_obstacles)), range(len(det_obstacles))
     else:
+        print("IOUS", ious)
         ious.sort(key=lambda x: x[-1], reverse=True)
         ground_set, det_set = set(), set()
 
