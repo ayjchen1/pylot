@@ -269,6 +269,7 @@ class VisualizerOperator(erdos.Operator):
                                                        obstacle_error_msg.obstacles,
                                                        transform=ego_transform,
                                                        bbox_color=[255, 0, 0]) # BLUE
+                
                 bgr_msg.frame.annotate_with_bounding_boxes(timestamp,
                                                         perfect_obstacles_msg.obstacles,
                                                         transform=ego_transform,

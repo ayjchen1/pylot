@@ -261,8 +261,8 @@ def spawn_vehicles(client, world, num_vehicles: int, logger):
         random.shuffle(spawn_points)
 
     # Get all the possible vehicle blueprints inside the world.
-    #v_blueprints = world.get_blueprint_library().filter('vehicle.*')
-    v_blueprints = world.get_blueprint_library().filter('vehicle.diamondback.*')
+    v_blueprints = world.get_blueprint_library().filter('vehicle.*')
+    #v_blueprints = world.get_blueprint_library().filter('vehicle.diamondback.*')
 
     # Construct a batch message that spawns the vehicles.
     batch = []

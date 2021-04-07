@@ -487,9 +487,8 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
                 iou = det_bb.calculate_iou(ground_bb)
             else:
                 iou = 0.0
-            #if (iou > iou_threshold):
-            #    ious.append((i, j, iou))
-            ious.append((i, j, iou))
+            if (iou > 0.01):
+                ious.append((i, j, iou))
     
     # If no IOUs were over the threshold, return all predictions as false
     # positives and all ground truths as false negatives.
