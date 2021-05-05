@@ -73,7 +73,7 @@ class DetectionEvalOperator(erdos.Operator):
 
         sim_time = timestamp.coordinates[0]
         while len(self._detector_start_end_times) > 0:
-            #print("INSIDE EVAL WATERMARK", timestamp)
+            print("INSIDE EVAL WATERMARK", timestamp)
             (end_time, start_time) = self._detector_start_end_times[0]
 
             if end_time <= game_time:
@@ -81,20 +81,20 @@ class DetectionEvalOperator(erdos.Operator):
 
                 ego_transform, ground_obstacles = self.__get_ground_obstacles_at(end_time)
 
-                go_labels = []
-                for go in ground_obstacles:
-                    go_labels.append(go.label)
+                #go_labels = []
+                #for go in ground_obstacles:
+                #    go_labels.append(go.label)
 
                 obstacles = self.__get_obstacles_at(start_time)
 
-                do_labels = []
-                for do in obstacles:
-                    do_labels.append(do.label)
+                #do_labels = []
+                #for do in obstacles:
+                #    do_labels.append(do.label)
                 #print(timestamp, go_labels, do_labels)
 
                 if (len(obstacles) > 0 or len(ground_obstacles) > 0):
                     errs = pylot.perception.detection.utils.get_errors(
-                        ground_obstacles, obstacles)
+                        ground_obstacles, obstacles, ego_transform)
 
                     # Get runtime in ms
                     runtime = (time.time() - op_start_time) * 1000
@@ -110,25 +110,26 @@ class DetectionEvalOperator(erdos.Operator):
                         det_ob = errs[i][1]
                         err_val = errs[i][2]
 
-                        if det_ob:
-                            matchobs.append([ground_ob.label, det_ob.label])
-                        else:
-                            matchobs.append([ground_ob.label])
-
+                        det_id = "NONE"
                         if (det_ob is not None):
                             det_ob.vis_error = err_val
+                            det_id = det_ob.id
 
-                        ego_loc = ego_transform.location.as_numpy_array()
-                        ob_actual_loc = ground_ob.transform.location.as_numpy_array()
+                        ego_point = ego_transform.location.as_numpy_array().reshape(1, 3)
+                        ego_loc = ego_transform.inverse_transform_points(ego_point).reshape(3,)
+
+                        ob_actual_point = ground_ob.transform.location.as_numpy_array().reshape(1, 3)
+                        ob_actual_loc = ego_transform.inverse_transform_points(ob_actual_point).reshape(3,)
+
                         relative_dist = ob_actual_loc - ego_loc
 
-                        # (time, time, object label, object id, x_obj - x_ego, error)
+                        #print([ground_ob.id, ego_loc, "===", ob_actual_loc, "====", relative_dist])
+                        print([ground_ob.id, det_id, err_val])
+                        
                         self._csv_logger.info('{},{},{},{},{},{:.4f},{:.4f},{:.4f},{:.4f}'.format(
                             time_epoch_ms(), sim_time, self.config.name, ground_ob.id, ground_ob.label,
                             relative_dist[0], relative_dist[1], relative_dist[2],
                             err_val))
-
-                    print(timestamp, matchobs)
 
                 self._logger.debug('Computing accuracy for {} {}'.format(
                     end_time, start_time))

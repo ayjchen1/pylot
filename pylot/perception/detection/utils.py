@@ -487,7 +487,7 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
                 iou = det_bb.calculate_iou(ground_bb)
             else:
                 iou = 0.0
-            if (iou > 0.01):
+            if (iou > 0.05):
                 ious.append((i, j, iou))
     
     # If no IOUs were over the threshold, return all predictions as false
@@ -495,7 +495,7 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
     if len(ious) == 0:
         return [], range(len(ground_obstacles)), range(len(det_obstacles))
     else:
-        print("IOUS", ious)
+        #print("IOUS", ious)
         ious.sort(key=lambda x: x[-1], reverse=True)
         ground_set, det_set = set(), set()
 
@@ -520,7 +520,7 @@ def match_ground_detected(ground_obstacles, det_obstacles, iou_threshold):
 
     return matched, extra_ground, extra_det
 
-def get_errors(ground_obstacles, det_obstacles):
+def get_errors(ground_obstacles, det_obstacles, ego_transform):
     sorted_obstacles = \
         sorted(det_obstacles, key=lambda o: o.confidence, reverse=True)
 
@@ -533,9 +533,12 @@ def get_errors(ground_obstacles, det_obstacles):
         ground_idx = matched[i][0]
         det_idx = matched[i][1]
 
-        ground_loc  = ground_obstacles[ground_idx].transform.location.as_numpy_array()
-        det_loc  = det_obstacles[det_idx].transform.location.as_numpy_array()
+        ground_point  = ground_obstacles[ground_idx].transform.location.as_numpy_array().reshape(1, 3)
+        det_point  = det_obstacles[det_idx].transform.location.as_numpy_array().reshape(1, 3)
 
+        ground_loc = ego_transform.inverse_transform_points(ground_point).reshape(3,)
+        det_loc = ego_transform.inverse_transform_points(det_point).reshape(3, )
+        
         cur_err = (np.linalg.norm(ground_loc - det_loc)) ** 2 
 
         errs.append((ground_obstacles[ground_idx], det_obstacles[det_idx], cur_err))
